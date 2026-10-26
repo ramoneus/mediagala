@@ -7,7 +7,7 @@ It's built with **FastAPI**, **SQLAlchemy 2.0**, **SQLite** and **Jinja2**. It r
 
 ---
 
-## ✨ Features
+##  Features
 
 - **Movies, series, anime, games and books in one collection:** switch between *All*, *Movies*, *Series*, *Anime*, *Games* and *Books* tabs
 - **Add, edit and delete titles** with title, release year, genre, description and a personal rating (1–10)
@@ -38,7 +38,7 @@ It's built with **FastAPI**, **SQLAlchemy 2.0**, **SQLite** and **Jinja2**. It r
 - **Custom images:** upload your own JPG, PNG or WebP image for any title, then replace or remove it later
 - **Generated "posters":** titles without an image get a unique gradient card, so no external images are needed
 
-## 🛠 Tech Stack
+##  Tech Stack
 
 | Layer      | Technology                         |
 |------------|------------------------------------|
@@ -48,7 +48,7 @@ It's built with **FastAPI**, **SQLAlchemy 2.0**, **SQLite** and **Jinja2**. It r
 | Validation | Pydantic v2                        |
 | Frontend   | Jinja2 templates · HTML5 · CSS3    |
 
-## 📁 Project Structure
+##  Project Structure
 
 ```
 mediagala/
@@ -93,7 +93,7 @@ Everything that differs per kind lives in one place, [`catalog.py`](app/catalog.
 
 Episodes are watched in order, so progress is stored as a single bookmark: the last watched season and episode. Every episode up to that point counts as watched. This keeps the schema small and makes "up next" and progress percentage simple calculations.
 
-## 🚀 Getting Started
+##  Getting Started
 
 ### Prerequisites
 
@@ -142,7 +142,7 @@ python -m app.seed
 
 This adds example movies, series and games, but only if the database is empty.
 
-## 🔒 Validation & Safety
+##  Validation & Safety
 
 - All form input is validated with **Pydantic** before it reaches the database. Validation covers required fields, length limits, year range (1888 to the current year + 5), known genres only, and ratings from 1 to 10.
 - **Business rules:**
@@ -166,7 +166,7 @@ This adds example movies, series and games, but only if the database is empty.
 - **No open redirects:** the "next episode" button only redirects back to paths inside the app.
 - Custom error pages for 404, 400 and 500 responses. Unexpected errors are logged and never shown to the user.
 
-## 📸 Screenshots
+##  Screenshots
 
 | Home | Add / Edit | Mobile |
 |------|------------|--------|
