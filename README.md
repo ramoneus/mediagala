@@ -172,8 +172,6 @@ This adds example movies, series and games, but only if the database is empty.
 |------|------------|--------|
 | ![Home](docs/screenshots/home.png) | ![Form](docs/screenshots/form.png) | ![Mobile](docs/screenshots/mobile.png) |
 
-> Screenshots are placeholders. Add your own images to `docs/screenshots/`.
-
 ## 🗺 Possible Improvements
 
 - Automated tests with `pytest` and FastAPI's `TestClient`
