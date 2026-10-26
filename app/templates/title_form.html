@@ -103,7 +103,7 @@
 
     <fieldset class="form-field form-field-wide">
       <legend>Status</legend>
-      <div class="segmented">
+      <div class="segmented segmented-status">
         {% for s in statuses %}
           <label {{ show_when(kinds=status_kinds[s.value]) }}>
             <input type="radio" name="status" value="{{ s.value }}" {% if s.value == current_status %}checked{% endif %}>
