@@ -1,0 +1,41 @@
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Python cache & build artifacts
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+
+# Local data (the SQLite database is created automatically on first run)
+data/
+*.db
+*.sqlite
+*.sqlite3
+*.db-journal
+
+# Environment & secrets
+.env
+.env.*
+
+# Tool caches
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Editors & OS files
+.vscode/
+.idea/
+*.swp
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Logs & temp files
+*.log
+*.tmp

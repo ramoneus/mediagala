@@ -1,0 +1,126 @@
+{% extends "base.html" %}
+
+{% block title %}{{ item.title }} · MediaGala{% endblock %}
+
+{% block content %}
+<a href="/" class="back-link">← Back to collection</a>
+
+<section class="detail">
+  {% set poster_class = "detail-poster" %}
+  {% include "partials/poster.html" %}
+
+  <div class="detail-info">
+    <p class="eyebrow">{{ item.kind.label }}</p>
+    <h1>{{ item.title }}</h1>
+    {% if item.kind.has_pages and item.author %}
+      <p class="detail-author">by {{ item.author }}</p>
+    {% endif %}
+    <p class="detail-meta">
+      {{ item.year }} · {{ item.genre }}
+      {% if item.kind.has_episodes %} · {{ item.seasons|length }} {{ "season" if item.seasons|length == 1 else "seasons" }}{% endif %}
+      {% if item.kind.has_pages and item.pages %} · {{ item.pages }} pages{% endif %}
+      {% if item.rating %} · <span class="star">★</span> {{ item.rating }}/10{% endif %}
+    </p>
+    {% if item.kind == "game" and (item.completion or item.hours_played is not none) %}
+      <p class="game-summary">
+        {% if item.completion %}<span class="completion-tag completion-{{ item.completion.value }}">{{ item.completion.label }}</span>{% endif %}
+        {% if item.hours_played is not none %}<span>{{ item.hours_played }} h played</span>{% endif %}
+      </p>
+    {% endif %}
+    {% if item.description %}
+      <p class="detail-description">{{ item.description }}</p>
+    {% endif %}
+    <div class="detail-actions">
+      <a class="btn" href="/titles/{{ item.id }}/edit">Edit</a>
+      <form method="post" action="/titles/{{ item.id }}/delete"
+            onsubmit="return confirm('Delete this title? This cannot be undone.');">
+        <button type="submit" class="btn btn-danger">Delete</button>
+      </form>
+    </div>
+  </div>
+</section>
+
+{% if item.kind.has_pages %}
+  <section class="episodes-section" aria-labelledby="reading-heading">
+    <div class="episodes-header">
+      <div>
+        <h2 id="reading-heading">Reading</h2>
+        <p class="episodes-summary">
+          {% if item.current_page %}
+            On page <strong>{{ item.current_page }}</strong>{% if item.pages %} of {{ item.pages }} · {{ item.reading_percent }}%{% endif %}
+          {% else %}
+            Not started yet
+          {% endif %}
+        </p>
+      </div>
+      <form method="post" action="/titles/{{ item.id }}/page" class="page-form">
+        <label for="page-input">I'm on page</label>
+        <input type="number" id="page-input" name="current_page" value="{{ item.current_page or '' }}"
+               min="0" {% if item.pages %}max="{{ item.pages }}"{% endif %} inputmode="numeric" required>
+        <button type="submit" class="btn btn-primary">Update</button>
+      </form>
+    </div>
+    {% if item.pages %}
+      <div class="progress-bar" role="progressbar" aria-label="Pages read"
+           aria-valuenow="{{ item.reading_percent }}" aria-valuemin="0" aria-valuemax="100">
+        <span style="width: {{ item.reading_percent }}%"></span>
+      </div>
+      <p class="field-hint">Reaching the last page takes you to rate the book.</p>
+    {% else %}
+      <p class="field-hint">Add the total number of pages (Edit) to see a progress bar.</p>
+    {% endif %}
+  </section>
+{% endif %}
+
+{% if item.kind.has_episodes %}
+  {% set next = item.next_episode %}
+  <section class="episodes-section" aria-labelledby="episodes-heading">
+    <div class="episodes-header">
+      <div>
+        <h2 id="episodes-heading">Episodes</h2>
+        <p class="episodes-summary">
+          {{ item.watched_episodes }} of {{ item.total_episodes }} watched
+          {% if next %} · Up next: <strong>S{{ next[0] }} · E{{ next[1] }}</strong>{% else %} · All caught up 🎉{% endif %}
+        </p>
+      </div>
+      <div class="episodes-actions">
+        {% if next %}
+          <form method="post" action="/titles/{{ item.id }}/next">
+            <input type="hidden" name="return_to" value="/titles/{{ item.id }}">
+            <button type="submit" class="btn btn-primary">✓ Watched S{{ next[0] }} · E{{ next[1] }}</button>
+          </form>
+        {% endif %}
+        {% if item.progress %}
+          <form method="post" action="/titles/{{ item.id }}/episodes"
+                onsubmit="return confirm('Clear all episode progress for this series?');">
+            <button type="submit" name="position" value="reset" class="btn btn-ghost">Reset progress</button>
+          </form>
+        {% endif %}
+      </div>
+    </div>
+
+    <div class="progress-bar" role="progressbar" aria-label="Episodes watched"
+         aria-valuenow="{{ item.progress_percent }}" aria-valuemin="0" aria-valuemax="100">
+      <span style="width: {{ item.progress_percent }}%"></span>
+    </div>
+    <p class="field-hint">Click an episode to mark it and every episode before it as watched. Click the last watched episode again to undo.</p>
+
+    <form method="post" action="/titles/{{ item.id }}/episodes">
+      {% for season in item.seasons %}
+        <div class="season">
+          <h3>Season {{ season.number }} <span>{{ item.watched_in_season(season.number) }}/{{ season.episode_count }}</span></h3>
+          <div class="episode-grid">
+            {% for e in range(1, season.episode_count + 1) %}
+              {% set watched = item.is_episode_watched(season.number, e) %}
+              <button type="submit" name="position" value="{{ season.number }}-{{ e }}"
+                      class="episode{% if watched %} is-watched{% elif next == (season.number, e) %} is-next{% endif %}"
+                      aria-pressed="{{ 'true' if watched else 'false' }}"
+                      aria-label="Season {{ season.number }}, episode {{ e }}">{{ e }}</button>
+            {% endfor %}
+          </div>
+        </div>
+      {% endfor %}
+    </form>
+  </section>
+{% endif %}
+{% endblock %}

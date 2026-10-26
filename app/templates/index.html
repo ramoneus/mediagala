@@ -1,0 +1,90 @@
+{% extends "base.html" %}
+
+{% block content %}
+{% if flash %}
+  <div class="flash" role="status">{{ flash }}</div>
+{% endif %}
+
+<section class="hero">
+  <p class="eyebrow">Movies · Series · Anime · Games · Books</p>
+  <h1>Everything you watch.<br><span class="accent">Everything you play and read.</span></h1>
+  <dl class="stats">
+    <div class="stat"><dt>Titles</dt><dd>{{ stats.total }}</dd></div>
+    <div class="stat"><dt>In progress</dt><dd>{{ stats.in_progress }}</dd></div>
+    <div class="stat"><dt>Finished</dt><dd>{{ stats.finished }}</dd></div>
+    <div class="stat"><dt>Planned</dt><dd>{{ stats.planned }}</dd></div>
+    <div class="stat"><dt>Avg rating</dt><dd>{{ "%.1f"|format(stats.avg_rating) if stats.avg_rating is not none else "–" }}</dd></div>
+  </dl>
+</section>
+
+<nav class="kind-tabs" aria-label="Show movies, series or both">
+  {% for tab in kind_tabs %}
+    <a href="{{ tab.url }}" class="kind-tab{% if tab.active %} is-active{% endif %}" {% if tab.active %}aria-current="page"{% endif %}>
+      {{ tab.label }} <span>{{ tab.count }}</span>
+    </a>
+  {% endfor %}
+</nav>
+
+<form class="toolbar" method="get" action="/" role="search">
+  <input type="hidden" name="kind" value="{{ filters.kind }}">
+  <div class="toolbar-search">
+    <label for="q" class="sr-only">Search by title or author</label>
+    <input type="search" id="q" name="q" value="{{ filters.q }}" placeholder="Search by title or author…" maxlength="200" autocomplete="off">
+  </div>
+
+  <label class="sr-only" for="genre">Genre</label>
+  <select id="genre" name="genre">
+    <option value="">All genres</option>
+    {% for g in genres %}
+      <option value="{{ g }}" {% if g == filters.genre %}selected{% endif %}>{{ g }}</option>
+    {% endfor %}
+  </select>
+
+  <label class="sr-only" for="status">Status</label>
+  <select id="status" name="status">
+    <option value="">All statuses</option>
+    {% for value, label in status_options %}
+      <option value="{{ value }}" {% if value == filters.status %}selected{% endif %}>{{ label }}</option>
+    {% endfor %}
+  </select>
+
+  <label class="sr-only" for="sort">Sort by</label>
+  <select id="sort" name="sort">
+    {% for key, label in sort_options.items() %}
+      <option value="{{ key }}" {% if key == filters.sort %}selected{% endif %}>{{ label }}</option>
+    {% endfor %}
+  </select>
+
+  <div class="toolbar-actions">
+    <button type="submit" class="btn">Apply</button>
+    {% if filters.active or filters.sort != "newest" %}
+      <a href="{{ reset_url }}" class="btn btn-ghost">Reset</a>
+    {% endif %}
+  </div>
+</form>
+
+{% if titles %}
+  <p class="result-count">
+    {{ titles|length }} {{ "title" if titles|length == 1 else "titles" }}{% if filters.active %} found{% endif %}
+  </p>
+  <div class="grid">
+    {% for item in titles %}
+      {% include "partials/title_card.html" %}
+    {% endfor %}
+  </div>
+{% elif filters.active %}
+  <div class="empty">
+    <p class="empty-icon" aria-hidden="true">🔍</p>
+    <h2>No matches</h2>
+    <p>Nothing matches these filters. Try a different search.</p>
+    <a href="{{ reset_url }}" class="btn">Clear filters</a>
+  </div>
+{% else %}
+  <div class="empty">
+    <p class="empty-icon" aria-hidden="true">🎬</p>
+    <h2>Nothing here yet</h2>
+    <p>Add a movie, series, anime, game or book you've finished or want to get to.</p>
+    <a href="/titles/new{% if filters.kind %}?kind={{ filters.kind }}{% endif %}" class="btn btn-primary">Add a title</a>
+  </div>
+{% endif %}
+{% endblock %}

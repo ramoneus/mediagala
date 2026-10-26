@@ -1,0 +1,203 @@
+{% extends "base.html" %}
+
+{% block title %}{{ "Edit " ~ item.title if item else "Add a title" }} · MediaGala{% endblock %}
+
+{% macro field_error(name) %}
+  {% if errors.get(name) %}<p class="field-error" id="{{ name }}-error">{{ errors[name] }}</p>{% endif %}
+{% endmacro %}
+
+{% macro invalid(name) %}{% if errors.get(name) %}aria-invalid="true" aria-describedby="{{ name }}-error"{% endif %}{% endmacro %}
+
+{#
+  Marks a field as belonging to some kinds and/or statuses. The server renders it
+  hidden when it doesn't apply; title-form.js re-checks whenever kind or status change.
+#}
+{% macro show_when(kinds=none, statuses=none) -%}
+  {% if kinds %} data-kinds="{{ kinds }}"{% endif %}
+  {%- if statuses %} data-statuses="{{ statuses }}"{% endif %}
+  {%- if (kinds and current_kind.value not in kinds.split()) or (statuses and current_status not in statuses.split()) %} hidden{% endif %}
+{%- endmacro %}
+
+{% block scripts %}<script src="{{ static_url('js/title-form.js') }}" defer></script>{% endblock %}
+
+{% block content %}
+<div class="form-page">
+  <a href="{{ '/titles/%d'|format(item.id) if item else '/' }}" class="back-link">← Back</a>
+  <h1>{{ "Edit " ~ item.kind.label|lower if item else "Add a title" }}</h1>
+
+  {% if finished %}
+    <div class="flash flash-celebrate" role="status">
+      🎉 You finished <strong>{{ item.title }}</strong>! Give it a rating and save to mark it as {{ finished_label|lower }}.
+    </div>
+  {% endif %}
+  {% if errors %}
+    <div class="flash flash-error" role="alert">Please fix the highlighted fields below.</div>
+  {% endif %}
+
+  {# Per-kind genres and status labels for title-form.js (tojson escapes it for safe embedding). #}
+  <script type="application/json" id="kind-config">{{ form_config|tojson }}</script>
+
+  <form method="post" action="{{ '/titles/%d/edit'|format(item.id) if item else '/titles' }}" class="title-form" enctype="multipart/form-data" novalidate>
+    <fieldset class="form-field form-field-wide">
+      <legend>Type</legend>
+      <div class="segmented">
+        {% for k in kinds %}
+          <label>
+            <input type="radio" name="kind" value="{{ k.value }}" {% if k == current_kind %}checked{% endif %}>
+            <span>{{ k.label }}</span>
+          </label>
+        {% endfor %}
+      </div>
+      {{ field_error('kind') }}
+    </fieldset>
+
+    <div class="form-field form-field-wide">
+      <label for="title">Title</label>
+      <input type="text" id="title" name="title" value="{{ form.get('title') or '' }}" maxlength="200" required {% if not item %}autofocus{% endif %} {{ invalid('title') }}>
+      {{ field_error('title') }}
+    </div>
+
+    <div class="form-field form-field-wide" {{ show_when(kinds=paged_kinds) }}>
+      <label for="author">Author <span class="optional">(optional)</span></label>
+      <input type="text" id="author" name="author" value="{{ form.get('author') or '' }}" maxlength="200" {{ invalid('author') }}>
+      {{ field_error('author') }}
+    </div>
+
+    <div class="form-field">
+      <label for="year" data-year-label>{{ current_kind.config.year_label }}</label>
+      <input type="number" id="year" name="year" value="{{ form.get('year') or '' }}" min="1888" max="{{ max_year }}" inputmode="numeric" required {{ invalid('year') }}>
+      {{ field_error('year') }}
+    </div>
+
+    <div class="form-field">
+      <label for="genre">Genre</label>
+      <select id="genre" name="genre" required {{ invalid('genre') }}>
+        <option value="">Choose a genre…</option>
+        {% for g in current_kind.config.genres %}
+          <option value="{{ g }}" {% if g == form.get('genre') %}selected{% endif %}>{{ g }}</option>
+        {% endfor %}
+      </select>
+      {{ field_error('genre') }}
+    </div>
+
+    {% set season_rows = form.get('seasons') or [''] %}
+    <fieldset class="form-field form-field-wide" {{ show_when(kinds=episodic_kinds) }}>
+      <legend>Seasons</legend>
+      <div class="season-count">
+        <label for="season_count">Number of seasons</label>
+        {# No name: this only drives the rows below, the server counts the rows themselves. #}
+        <input type="number" id="season_count" value="{{ season_rows|length }}" min="1" max="50" inputmode="numeric">
+      </div>
+      <div class="season-rows" id="season-rows">
+        {% for count in season_rows %}
+          <label class="season-row">
+            <span class="season-row-name">Season {{ loop.index }}</span>
+            <input type="number" name="season_episodes" value="{{ count }}" min="1" max="500" inputmode="numeric" {{ invalid('seasons') }}>
+            <span class="season-row-suffix">episodes</span>
+          </label>
+        {% endfor %}
+      </div>
+      <p class="field-hint">Each season can have a different number of episodes. New seasons start with the previous season's count.</p>
+      {{ field_error('seasons') }}
+    </fieldset>
+
+    <fieldset class="form-field form-field-wide">
+      <legend>Status</legend>
+      <div class="segmented">
+        {% for s in statuses %}
+          <label {{ show_when(kinds=status_kinds[s.value]) }}>
+            <input type="radio" name="status" value="{{ s.value }}" {% if s.value == current_status %}checked{% endif %}>
+            <span data-status-label="{{ s.value }}">{{ current_kind.config.status_labels.get(s, s.value|capitalize) }}</span>
+          </label>
+        {% endfor %}
+      </div>
+      {{ field_error('status') }}
+    </fieldset>
+
+    <div class="form-field">
+      <label for="rating">Your rating</label>
+      <select id="rating" name="rating" {{ invalid('rating') }}>
+        <option value="">Not rated</option>
+        {% for n in range(10, 0, -1) %}
+          <option value="{{ n }}" {% if form.get('rating')|string == n|string %}selected{% endif %}>{{ "★ %d / 10"|format(n) }}</option>
+        {% endfor %}
+      </select>
+      <p class="field-hint">Required once finished. Ignored while it's still planned.</p>
+      {{ field_error('rating') }}
+    </div>
+
+    <div class="form-field" {{ show_when(kinds="game", statuses="watched") }}>
+      <label for="completion">How far did you get?</label>
+      <select id="completion" name="completion" {{ invalid('completion') }}>
+        <option value="">Choose…</option>
+        {% for c in completions %}
+          <option value="{{ c.value }}" {% if c.value == form.get('completion') %}selected{% endif %}>{{ c.label }}</option>
+        {% endfor %}
+      </select>
+      {{ field_error('completion') }}
+    </div>
+
+    <div class="form-field" {{ show_when(kinds="game") }}>
+      <label for="hours_played">Hours played <span class="optional">(optional)</span></label>
+      <input type="number" id="hours_played" name="hours_played" value="{{ form.get('hours_played') if form.get('hours_played') is not none else '' }}" min="0" max="{{ max_hours }}" inputmode="numeric" {{ invalid('hours_played') }}>
+      {{ field_error('hours_played') }}
+    </div>
+
+    <div class="form-field" {{ show_when(kinds=paged_kinds) }}>
+      <label for="pages">Total pages <span class="optional">(optional)</span></label>
+      <input type="number" id="pages" name="pages" value="{{ form.get('pages') or '' }}" min="1" max="{{ max_pages }}" inputmode="numeric" {{ invalid('pages') }}>
+      {{ field_error('pages') }}
+    </div>
+
+    <div class="form-field" {{ show_when(kinds=paged_kinds, statuses="watching dropped") }}>
+      <label for="current_page">Current page <span class="optional">(optional)</span></label>
+      <input type="number" id="current_page" name="current_page" value="{{ form.get('current_page') if form.get('current_page') is not none else '' }}" min="0" max="{{ max_pages }}" inputmode="numeric" {{ invalid('current_page') }}>
+      {{ field_error('current_page') }}
+    </div>
+
+    <fieldset class="form-field form-field-wide" {{ show_when(kinds=episodic_kinds, statuses="watching dropped") }}>
+      <legend>Last episode watched <span class="optional">(leave empty if you haven't started)</span></legend>
+      <div class="progress-inputs">
+        <label>Season
+          <input type="number" name="progress_season" value="{{ form.get('progress_season') or '' }}" min="1" inputmode="numeric" {{ invalid('progress_season') }}>
+        </label>
+        <label>Episode
+          <input type="number" name="progress_episode" value="{{ form.get('progress_episode') or '' }}" min="1" inputmode="numeric" {{ invalid('progress_episode') }}>
+        </label>
+      </div>
+      <p class="field-hint">You can also tick off episodes on the title's page.</p>
+      {{ field_error('progress_season') }}
+      {{ field_error('progress_episode') }}
+    </fieldset>
+
+    <div class="form-field form-field-wide">
+      <label for="description">Description <span class="optional">(optional)</span></label>
+      <textarea id="description" name="description" rows="5" maxlength="2000" {{ invalid('description') }}>{{ form.get('description') or '' }}</textarea>
+      {{ field_error('description') }}
+    </div>
+
+    <div class="form-field form-field-wide">
+      <label for="poster">Image <span class="optional">(optional)</span></label>
+      {% if item and item.poster_filename %}
+        <div class="current-poster">
+          <img src="/posters/{{ item.poster_filename }}" alt="Current image for {{ item.title }}">
+          <label class="checkbox">
+            <input type="checkbox" name="remove_poster" value="1"> Remove current image
+          </label>
+        </div>
+      {% endif %}
+      <input type="file" id="poster" name="poster" accept="{{ accepted_types }}" {{ invalid('poster') }}>
+      <p class="field-hint">
+        JPG, PNG or WebP, up to 5 MB.{% if item and item.poster_filename %} A new file replaces the current image.{% endif %}
+        {% if errors and not errors.get('poster') %}<br><strong>If you had picked an image, please choose it again — files aren't kept after an error.</strong>{% endif %}
+      </p>
+      {{ field_error('poster') }}
+    </div>
+
+    <div class="form-actions form-field-wide">
+      <a href="{{ '/titles/%d'|format(item.id) if item else '/' }}" class="btn btn-ghost">Cancel</a>
+      <button type="submit" class="btn btn-primary">{{ "Save changes" if item else "Add title" }}</button>
+    </div>
+  </form>
+</div>
+{% endblock %}

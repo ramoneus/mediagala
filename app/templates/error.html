@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+
+{% block title %}Error {{ status_code }} · MediaGala{% endblock %}
+
+{% block content %}
+<div class="empty error-page">
+  <p class="error-code">{{ status_code }}</p>
+  <h1>{{ message }}</h1>
+  <a href="/" class="btn btn-primary">Back to collection</a>
+</div>
+{% endblock %}

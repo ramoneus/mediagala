@@ -1,0 +1,13 @@
+<div class="poster{{ ' ' ~ poster_class if poster_class }}" style="--hue: {{ (item.id * 47) % 360 }}">
+  {% if item.poster_filename %}
+    <img src="/posters/{{ item.poster_filename }}" alt="" loading="lazy">
+  {% else %}
+    <span class="poster-initial" aria-hidden="true">{{ item.title[:1]|upper }}</span>
+  {% endif %}
+  <span class="badge badge-{{ item.status.value }}">{{ item.status_label }}</span>
+  {% if item.rating %}
+    <span class="rating" title="Your rating">
+      <span aria-hidden="true">★</span> {{ item.rating }}<small>/10</small>
+    </span>
+  {% endif %}
+</div>

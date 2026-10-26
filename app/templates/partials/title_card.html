@@ -1,0 +1,82 @@
+<article class="card{% if item.status == 'dropped' %} is-dropped{% endif %}">
+  {% set poster_class = "" %}
+  {% include "partials/poster.html" %}
+
+  <div class="card-body">
+    <h2 class="card-title"><a href="/titles/{{ item.id }}" class="card-link">{{ item.title }}</a></h2>
+    {% if item.kind.has_pages and item.author %}
+      <p class="card-author">by {{ item.author }}</p>
+    {% endif %}
+    <p class="card-meta">
+      {{ item.year }} <span aria-hidden="true">·</span> {{ item.genre }}
+      <span class="kind-tag">{{ item.kind.label }}</span>
+    </p>
+
+    {% if item.kind.has_episodes %}
+      <div class="series-progress">
+        {% if item.progress or item.status in ("watching", "dropped") %}
+          {% set next = item.next_episode %}
+          <div class="progress-bar" role="progressbar" aria-label="Episodes watched"
+               aria-valuenow="{{ item.progress_percent }}" aria-valuemin="0" aria-valuemax="100">
+            <span style="width: {{ item.progress_percent }}%"></span>
+          </div>
+          <div class="progress-row">
+            <span>{{ item.watched_episodes }}/{{ item.total_episodes }} episodes</span>
+            {% if item.status == "dropped" %}
+              {% if item.progress %}<span>Stopped at S{{ item.progress_season }} · E{{ item.progress_episode }}</span>{% endif %}
+            {% elif next %}
+              <form method="post" action="/titles/{{ item.id }}/next">
+                <input type="hidden" name="return_to" value="{{ current_url }}">
+                <button type="submit" class="btn btn-small btn-next" title="Mark season {{ next[0] }}, episode {{ next[1] }} as watched">
+                  ✓ S{{ next[0] }} · E{{ next[1] }}
+                </button>
+              </form>
+            {% endif %}
+          </div>
+        {% else %}
+          <p class="series-summary">
+            {{ item.seasons|length }} {{ "season" if item.seasons|length == 1 else "seasons" }} · {{ item.total_episodes }} episodes
+          </p>
+        {% endif %}
+      </div>
+    {% endif %}
+
+    {% if item.kind.has_pages %}
+      <div class="series-progress">
+        {% if item.current_page is not none and item.pages %}
+          <div class="progress-bar" role="progressbar" aria-label="Pages read"
+               aria-valuenow="{{ item.reading_percent }}" aria-valuemin="0" aria-valuemax="100">
+            <span style="width: {{ item.reading_percent }}%"></span>
+          </div>
+          <div class="progress-row">
+            <span>{{ item.current_page }}/{{ item.pages }} pages</span>
+            <span>{{ item.reading_percent }}%</span>
+          </div>
+        {% elif item.current_page is not none %}
+          <p class="series-summary">On page {{ item.current_page }}</p>
+        {% elif item.pages %}
+          <p class="series-summary">{{ item.pages }} pages</p>
+        {% endif %}
+      </div>
+    {% endif %}
+
+    {% if item.kind == "game" and (item.completion or item.hours_played is not none) %}
+      <p class="game-summary">
+        {% if item.completion %}<span class="completion-tag completion-{{ item.completion.value }}">{{ item.completion.label }}</span>{% endif %}
+        {% if item.hours_played is not none %}<span>{{ item.hours_played }} h played</span>{% endif %}
+      </p>
+    {% endif %}
+
+    {% if item.description %}
+      <p class="card-description">{{ item.description }}</p>
+    {% endif %}
+  </div>
+
+  <div class="card-actions">
+    <a class="btn btn-small" href="/titles/{{ item.id }}/edit">Edit</a>
+    <form method="post" action="/titles/{{ item.id }}/delete"
+          onsubmit="return confirm('Delete this title? This cannot be undone.');">
+      <button type="submit" class="btn btn-small btn-danger">Delete</button>
+    </form>
+  </div>
+</article>
