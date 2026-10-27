@@ -1,5 +1,7 @@
 {% extends "base.html" %}
 
+{% block scripts %}<script src="{{ static_url('js/fridge.js') }}" defer></script>{% endblock %}
+
 {% block content %}
 {% if flash %}
   <div class="flash" role="status">{{ flash }}</div>
@@ -18,31 +20,73 @@
       </span>
       <span class="fridge-handle" aria-hidden="true"></span>
     </div>
-    <div class="fridge-main">
-      {% if stats.total %}
-        {% set segments = [
-          ("finished", "finished", stats.finished, "watched"),
-          ("progress", "in progress", stats.in_progress, "watching"),
-          ("planned", "planned", stats.planned, "watchlist"),
-          ("dropped", "dropped", stats.dropped, "dropped"),
-        ] %}
-        {% set tilts = [-4, 3, -2, 4] %}
-        {# Magnets count the whole fridge, so they filter the whole fridge (all kinds). #}
-        <ul class="magnets">
-          {% for key, label, count, status_value in segments if count or key != "dropped" %}
-            {% set active = filters.status == status_value and not filters.kind %}
-            <li>
-              <a class="magnet seg-{{ key }}{% if active %} is-active{% endif %}"
-                 href="{{ '/' if active else '/?status=' ~ status_value }}"
-                 style="--tilt: {{ tilts[loop.index0 % 4] }}deg"
-                 {% if active %}aria-current="true" title="Show everything"{% else %}title="Show {{ label }} titles"{% endif %}>
-                <strong>{{ count }}</strong> {{ label }}
-              </a>
-            </li>
-          {% endfor %}
-        </ul>
-      {% endif %}
-      <span class="fridge-handle" aria-hidden="true"></span>
+    {% set fridge_state = request.query_params.get('fridge', '') %}
+    <div class="fridge-main{% if fridge_state == 'open' %} is-open{% elif fridge_state == 'peek' %} is-peek{% endif %}" data-fridge>
+      {# Inside the fridge: whatever you have "open" right now (titles in progress). #}
+      <div class="fridge-inside" id="fridge-inside">
+        <div class="fridge-inside-head">
+          <p class="fridge-inside-title">Open now</p>
+          <button type="button" class="fridge-close">Close</button>
+        </div>
+        {% if open_titles %}
+          <ul class="fridge-shelves">
+            {% for t in open_titles %}
+              <li>
+                <a class="fridge-item kind-{{ t.kind.value }}" href="/titles/{{ t.id }}">
+                  <span class="fridge-item-title">{{ t.title }}</span>
+                  <span class="fridge-item-meta">
+                    {%- if t.kind.has_episodes and t.next_episode %}Next: S{{ t.next_episode[0] }} · E{{ t.next_episode[1] }}
+                    {%- elif t.kind.has_pages and t.pages and t.current_page is not none %}{{ t.reading_percent }}% read
+                    {%- elif t.kind == "game" and t.hours_played is not none %}{{ t.hours_played }} h played
+                    {%- else %}{{ t.status_label }}{% endif -%}
+                  </span>
+                </a>
+              </li>
+            {% endfor %}
+          </ul>
+        {% else %}
+          <p class="fridge-empty">Nothing open. Grab something from the planned shelf.</p>
+        {% endif %}
+      </div>
+
+      {# The door has two faces: the enamel front with the magnets, and the inner side with door bins. #}
+      <div class="fridge-door-panel">
+        <div class="door-face door-front">
+          {% if stats.total %}
+            {% set segments = [
+              ("finished", "finished", stats.finished, "watched"),
+              ("progress", "in progress", stats.in_progress, "watching"),
+              ("planned", "planned", stats.planned, "watchlist"),
+              ("dropped", "dropped", stats.dropped, "dropped"),
+            ] %}
+            {% set tilts = [-4, 3, -2, 4] %}
+            <ul class="magnets">
+              {% for key, label, count, status_value in segments if count or key != "dropped" %}
+                {% set active = filters.status == status_value and not filters.kind %}
+                <li>
+                  <a class="magnet seg-{{ key }}{% if active %} is-active{% endif %}"
+                     href="{{ '/' if active else '/?status=' ~ status_value }}"
+                     style="--tilt: {{ tilts[loop.index0 % 4] }}deg">
+                    <strong>{{ count }}</strong> {{ label }}
+                  </a>
+                </li>
+              {% endfor %}
+            </ul>
+          {% endif %}
+          <span class="door-hint" aria-hidden="true">
+            {% if stats.in_progress %}{{ stats.in_progress }} open inside{% else %}Peek inside{% endif %}
+            <svg viewBox="0 0 16 16" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3l5 5-5 5"/></svg>
+          </span>
+          <button type="button" class="fridge-handle fridge-handle-button"
+                  aria-controls="fridge-inside" aria-expanded="false" aria-label="Open the fridge"></button>
+        </div>
+        <div class="door-face door-back" aria-hidden="true">
+          {# Door bins with a few bottles, seen when the door is open. #}
+          <div class="door-bin"><span class="bottle milk"></span><span class="bottle juice"></span><span class="bottle milk short"></span></div>
+          <div class="door-bin"><span class="bottle sauce"></span><span class="bottle sauce short"></span></div>
+          <div class="door-bin"><span class="bottle water"></span><span class="bottle milk"></span></div>
+        </div>
+      </div>
     </div>
     <div class="fridge-feet" aria-hidden="true"><span></span><span></span></div>
   </aside>

@@ -257,6 +257,8 @@ def index(
         "sort": "" if sort == crud.DEFAULT_SORT else sort,
     }
     stats = crud.get_stats(db)
+    # Titles you have "open" (in progress), shown on the shelves inside the fridge.
+    open_titles = crud.list_titles(db, status=Status.IN_PROGRESS)[:6]
     tab_specs = [("All", "", stats.total)] + [(k.config.plural, k.value, stats.by_kind[k]) for k in Kind]
     kind_tabs = [
         {
@@ -275,6 +277,7 @@ def index(
         {
             "titles": titles,
             "stats": stats,
+            "open_titles": open_titles,
             "kind_tabs": kind_tabs,
             "genres": genres,
             "status_options": status_options,

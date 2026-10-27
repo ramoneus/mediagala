@@ -1714,3 +1714,259 @@ input[type="file"]::file-selector-button:hover {
     transition: none !important;
   }
 }
+
+/* ---------- Fridge door (prototype: works on desktop; mobile version still to design) ---------- */
+:root { --fridge-inside: #f3f8fe; --fridge-liner: #e9f1fa; --fridge-light: rgba(255, 244, 214, 0.75); }
+:root[data-theme="dark"] { --fridge-inside: #23365a; --fridge-liner: #2a3f63; --fridge-light: rgba(255, 236, 190, 0.22); }
+
+/* The swung-out door may poke past the page edge on phones; clip it without a sideways scroll. */
+body { overflow-x: clip; }
+
+/* The fridge compartment is now a box (the inside) with the door laid over it. */
+.fridge-main {
+  overflow: visible;
+  padding: 0;
+  background: none;
+  border: 0;
+  box-shadow: none;
+  /* A gentle perspective keeps the open door (past 90 degrees, left of the hinge) narrow
+     enough to fit in the page margin instead of covering the shelves. */
+  perspective: 1800px;
+  perspective-origin: 50% 50%;
+}
+
+.fridge-main::after { display: none; }
+
+.fridge-inside {
+  position: relative;
+  min-height: 320px;
+  padding: 22px 18px 24px;
+  border: 1px solid var(--border);
+  border-radius: 6px 6px 20px 20px;
+  background: var(--fridge-inside);
+  box-shadow: inset 0 0 0 6px rgba(255, 255, 255, 0.35), inset 0 10px 30px rgba(19, 45, 80, 0.12);
+  overflow: hidden;
+}
+
+/* The little light that comes on when the door opens (and leaks out when it's peeked). */
+.fridge-inside::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at 50% 0%, var(--fridge-light), transparent 65%);
+  opacity: 0;
+  transition: opacity 0.3s ease 0.1s;
+  pointer-events: none;
+}
+
+.fridge-main.is-open .fridge-inside::before { opacity: 1; }
+.fridge-main.is-peek .fridge-inside::before,
+.fridge-main:not(.is-open):has(.fridge-door-panel:hover) .fridge-inside::before { opacity: 0.6; }
+
+.fridge-inside-head {
+  position: relative;
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.fridge-close {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--accent);
+  font: inherit;
+  font-size: 0.6875rem;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.fridge-close:hover { text-decoration: underline; }
+
+.fridge-inside-title {
+  position: relative;
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 0.6875rem;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+/* Glass shelves: each title sits on one. */
+.fridge-shelves { position: relative; margin: 0; padding: 0; list-style: none; }
+.fridge-shelves li { padding: 8px 0 10px; border-bottom: 3px solid rgba(140, 200, 255, 0.45); }
+
+.fridge-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 7px 10px;
+  border-left: 5px solid var(--kind-colour, var(--accent));
+  border-radius: 4px;
+  background: var(--surface);
+  box-shadow: 0 3px 8px rgba(19, 45, 80, 0.12);
+  color: var(--text);
+  text-decoration: none;
+}
+
+.fridge-item:hover { background: var(--surface-hover); }
+.fridge-item.kind-movie { --kind-colour: #16294a; }
+.fridge-item.kind-series { --kind-colour: #1f4f8f; }
+.fridge-item.kind-anime { --kind-colour: #3b3577; }
+.fridge-item.kind-game { --kind-colour: #17505a; }
+.fridge-item.kind-book { --kind-colour: #5a4632; }
+.fridge-item-title { font-size: 0.875rem; font-weight: 700; line-height: 1.25; }
+.fridge-item-meta { color: var(--text-muted); font-size: 0.75rem; }
+.fridge-empty { position: relative; color: var(--text-muted); font-size: 0.875rem; }
+
+/* The door: a 3D panel hinged on the left with a front and a back face. */
+.fridge-door-panel {
+  position: absolute;
+  inset: 0;
+  cursor: pointer;
+  transform-origin: left center;
+  transform-style: preserve-3d;
+  transition: transform 0.5s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.fridge-main.no-motion .fridge-door-panel,
+.fridge-main.no-motion .fridge-inside::before { transition: none; }
+
+/* Peek: the door eases open a crack on hover, inviting a click. */
+.fridge-main.is-peek .fridge-door-panel,
+.fridge-main:not(.is-open) .fridge-door-panel:hover { transform: rotateY(-14deg); }
+
+/* Open: past 90 degrees, so you see the inner side of the door with its bins. */
+.fridge-main.is-open .fridge-door-panel { transform: rotateY(-102deg); }
+
+.door-face {
+  position: absolute;
+  inset: 0;
+  border: 1px solid var(--border);
+  border-radius: 6px 6px 20px 20px;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}
+
+/* The magnets are rotated, so the browser paints them on their own layer and they would
+   show (and stay clickable) through the open door. Hide the whole front face once the door
+   passes 90 degrees, and bring it back as soon as it swings shut again. */
+.door-front {
+  transition: visibility 0s linear 0.03s;
+}
+
+.fridge-main.is-open .door-front {
+  visibility: hidden;
+  transition-delay: 0.16s;
+}
+
+.fridge-main.no-motion .door-front {
+  transition: none;
+}
+
+.door-front {
+  padding: 26px 44px 30px 20px;
+  background: linear-gradient(170deg, var(--fridge-top), var(--fridge-bottom));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.55), 6px 0 16px rgba(19, 45, 80, 0.12);
+}
+
+.door-front::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: linear-gradient(115deg, transparent 25%, var(--fridge-sheen) 35%, transparent 45%);
+  pointer-events: none;
+}
+
+/* "4 open inside ›" — tells you what's behind the door before you open it. */
+.door-hint {
+  position: absolute;
+  left: 20px;
+  bottom: 16px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--accent);
+  font-size: 0.75rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.fridge-door-panel:hover .door-hint svg { transform: translateX(3px); }
+.door-hint svg { transition: transform 0.2s ease; }
+
+/* Inner side of the door: a plastic liner with three bins holding bottles. */
+.door-back {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-evenly;
+  padding: 18px 14px;
+  background: linear-gradient(180deg, var(--fridge-liner), var(--fridge-inside));
+  transform: rotateY(180deg);
+}
+
+.door-bin {
+  position: relative;
+  display: flex;
+  align-items: flex-end;
+  gap: 6px;
+  height: 58px;
+  padding: 0 10px;
+}
+
+/* The bin's clear front lip, in front of the bottles. */
+.door-bin::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 22px;
+  border: 2px solid rgba(140, 200, 255, 0.7);
+  border-top-width: 3px;
+  border-radius: 0 0 8px 8px;
+  background: rgba(200, 228, 255, 0.45);
+}
+
+.bottle {
+  width: 16px;
+  height: 46px;
+  border-radius: 6px 6px 3px 3px;
+  box-shadow: inset -3px 0 0 rgba(0, 0, 0, 0.08);
+}
+
+.bottle.short { height: 34px; }
+.bottle.milk { background: #ffffff; border: 1px solid #d3e0ee; }
+.bottle.juice { background: #f2a83b; }
+.bottle.sauce { width: 12px; background: #d6453d; }
+.bottle.water { background: #a9d6f5; }
+
+.fridge-handle-button {
+  z-index: 1;
+  padding: 0;
+  border: 0;
+  cursor: pointer;
+}
+
+/* A bigger invisible target around the handle. */
+.fridge-handle-button::before { box-shadow: 0 0 0 14px transparent; }
+
+.fridge-handle-button:focus-visible {
+  outline: 3px solid var(--gold);
+  outline-offset: 3px;
+}
+
+@media (max-width: 900px) {
+  .fridge-inside { min-height: 190px; padding: 16px 16px 18px; }
+  .door-front { padding: 18px 44px 40px 18px; }
+  .fridge-shelves { display: flex; gap: 10px; overflow-x: auto; }
+  .fridge-shelves li { flex: 0 0 auto; border-bottom: 0; padding: 0; }
+  .door-back { flex-direction: row; align-items: center; }
+  .door-bin { flex: 1; }
+}
