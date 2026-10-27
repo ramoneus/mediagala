@@ -24,7 +24,7 @@ from app.catalog import (
     Completion,
     Kind,
     Status,
-    combined_status_label,
+    GENERIC_STATUS_LABELS,
     form_config,
 )
 from app.database import get_db
@@ -236,13 +236,13 @@ def index(
     # Unknown filter values are ignored instead of producing an error page.
     q = q.strip()[:200]
     title_kind = parse_choice(Kind, kind)
-    # Each kind has its own genres and status labels; "All" shows every genre and combined labels.
+    # Each kind has its own genres and status labels; "All" shows every genre and kind-neutral labels.
     if title_kind:
         genres = title_kind.config.genres
         status_options = list(title_kind.config.status_labels.items())
     else:
         genres = ALL_GENRES
-        status_options = [(s, combined_status_label(s)) for s in Status]
+        status_options = list(GENERIC_STATUS_LABELS.items())
     genre = genre if genre in genres else ""
     watch_status = parse_choice(Status, status_param)
     if watch_status not in dict(status_options):

@@ -32,6 +32,12 @@
   --header-bg: rgba(16, 33, 58, 0.97);
   --header-border: #1d3557;
   --brand-media: #8cc8ff;
+  /* "The fridge" overview */
+  --fridge-top: #ffffff;
+  --fridge-bottom: #dfeaf5;
+  --fridge-sheen: rgba(255, 255, 255, 0.3);
+  --handle-dark: #9fb3c9;
+  --handle-light: #f7fafd;
 
   /* Tight corners on purpose: printed-label feel rather than soft "app" cushions. */
   --radius: 6px;
@@ -68,6 +74,11 @@
   --progress-to: #8cc8ff;
   --header-bg: rgba(10, 18, 32, 0.92);
   --header-border: var(--border);
+  --fridge-top: #1d304d;
+  --fridge-bottom: #111d31;
+  --fridge-sheen: rgba(255, 255, 255, 0.07);
+  --handle-dark: #34496a;
+  --handle-light: #9db1cc;
   --shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
 }
 
@@ -323,11 +334,7 @@ h2 {
   to { opacity: 1; transform: none; }
 }
 
-/* ---------- Hero & summary ---------- */
-
-.hero {
-  margin-bottom: 32px;
-}
+/* ---------- Home layout & "The fridge" ---------- */
 
 .eyebrow {
   margin: 0 0 8px;
@@ -338,13 +345,58 @@ h2 {
   text-transform: uppercase;
 }
 
-/* "Your collection" heading with the total, then one bar showing what the collection
-   is made of (finished / in progress / planned / dropped), like the milk level in a carton. */
-.shelf-head {
+/* The home page: a tall fridge stands beside the collection instead of a wide header,
+   so the list starts at the top of the page. */
+.home {
+  display: grid;
+  grid-template-columns: 236px minmax(0, 1fr);
+  gap: 32px;
+  align-items: start;
+}
+
+/* "The fridge": the collection overview as a classic top-freezer fridge. The freezer holds
+   the title and a temperature-style display; the fridge door holds one magnet per status,
+   and each magnet is a filter. It stays in view while the list scrolls. */
+.fridge {
+  position: sticky;
+  top: 88px;
+  filter: drop-shadow(0 16px 26px rgba(19, 45, 80, 0.14));
+}
+
+.fridge-freezer,
+.fridge-main {
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(170deg, var(--fridge-top), var(--fridge-bottom));
+  border: 1px solid var(--border);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.55);
+}
+
+/* Diagonal sheen across each door's enamel. */
+.fridge-freezer::after,
+.fridge-main::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(115deg, transparent 25%, var(--fridge-sheen) 35%, transparent 45%);
+  pointer-events: none;
+}
+
+.fridge-freezer {
   display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 16px;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 22px 44px 22px 20px;
+  border-radius: 22px 22px 6px 6px;
+}
+
+/* The small gap between the two doors is the seam between freezer and fridge. */
+.fridge-main {
+  min-height: 320px;
+  margin-top: 4px;
+  padding: 26px 44px 30px 20px;
+  border-radius: 6px 6px 20px 20px;
 }
 
 .shelf-title {
@@ -354,60 +406,139 @@ h2 {
   letter-spacing: -0.03em;
 }
 
-.shelf-count {
-  color: var(--text-muted);
-  font-size: 0.9375rem;
-  font-weight: 600;
-  white-space: nowrap;
+/* Little digital display, like a fridge's temperature panel (dark in both themes). */
+.fridge-display {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 12px;
+  border-radius: 8px;
+  background: #0b1626;
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.5), 0 1px 0 rgba(255, 255, 255, 0.5);
+  color: #8cc8ff;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
 }
 
-.shelf-bar {
-  display: flex;
-  gap: 3px;
-  height: 12px;
-  margin-top: 14px;
-  overflow: hidden;
-  background: var(--surface-hover);
+.fridge-display strong {
+  font-size: 1rem;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.04em;
+  text-shadow: 0 0 8px rgba(140, 200, 255, 0.6);
+}
+
+/* Chunky handles near the seam (low on the freezer, high on the fridge), each on two mounts. */
+.fridge-handle {
+  position: absolute;
+  right: 16px;
+  width: 12px;
+  border-radius: 8px;
+  background: linear-gradient(90deg, var(--handle-dark), var(--handle-light) 45%, var(--handle-dark));
+  box-shadow: 3px 4px 8px rgba(0, 0, 0, 0.22);
+}
+
+.fridge-handle::before,
+.fridge-handle::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  width: 22px;
+  height: 7px;
+  margin-left: -11px;
   border-radius: 3px;
+  background: var(--handle-dark);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.25);
 }
 
-.shelf-seg {
-  flex-basis: 0;
-  min-width: 6px;
+.fridge-handle::before { top: 6px; }
+.fridge-handle::after { bottom: 6px; }
+
+.fridge-freezer .fridge-handle {
+  bottom: 14px;
+  height: 52px;
 }
 
-.shelf-legend {
+.fridge-main .fridge-handle {
+  top: 14px;
+  height: 110px;
+}
+
+.magnets {
   display: flex;
-  flex-wrap: wrap;
-  gap: 6px 22px;
-  margin: 12px 0 0;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 16px;
+  margin: 0;
   padding: 0;
   list-style: none;
-  color: var(--text-muted);
-  font-size: 0.9375rem;
 }
 
-.shelf-legend li {
+.fridge-feet {
   display: flex;
-  align-items: center;
+  justify-content: space-between;
+  padding: 0 24px;
+}
+
+.fridge-feet span {
+  width: 26px;
+  height: 8px;
+  border-radius: 0 0 5px 5px;
+  background: var(--handle-dark);
+}
+
+/* Glossy plastic fridge magnets, slightly crooked as if stuck on by hand. */
+.magnet {
+  position: relative;
+  z-index: 1;
+  display: inline-flex;
+  align-items: baseline;
   gap: 7px;
-}
-
-.shelf-legend strong {
-  color: var(--text);
+  padding: 8px 15px 10px;
+  border-radius: 14px;
+  font-size: 0.9375rem;
   font-weight: 700;
+  text-decoration: none;
+  transform: rotate(var(--tilt, 0deg));
+  box-shadow: inset 0 -4px 0 rgba(0, 0, 0, 0.2), 0 6px 12px rgba(19, 45, 80, 0.18);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
 }
 
-.shelf-dot {
-  width: 10px;
-  height: 10px;
-  border-radius: 2px;
+.magnet::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: radial-gradient(circle at 22% 18%, rgba(255, 255, 255, 0.4), transparent 45%);
+  pointer-events: none;
 }
 
-.seg-finished { background: var(--accent); }
-.seg-progress { background: var(--gold); }
-.seg-planned { background: var(--border-strong); }
-.seg-dropped { background: var(--danger); }
+.magnet:hover {
+  transform: rotate(0deg) translateY(-3px);
+  box-shadow: inset 0 -4px 0 rgba(0, 0, 0, 0.2), 0 10px 18px rgba(19, 45, 80, 0.22);
+}
+
+/* The magnet you filtered by straightens up and gets a ring. */
+.magnet.is-active {
+  transform: none;
+  outline: 3px solid var(--text);
+  outline-offset: 3px;
+}
+
+.magnet strong {
+  font-family: var(--font-logo);
+  font-size: 1.375rem;
+  font-weight: 400;
+  line-height: 1;
+}
+
+/* Status colours, shared by the magnets. */
+.seg-finished { background: var(--accent); color: var(--on-accent); }
+.seg-progress { background: var(--gold); color: #fff; }
+.seg-planned { background: var(--border-strong); color: var(--text); }
+.seg-dropped { background: var(--danger); color: #fff; }
+[data-theme="dark"] .seg-progress { color: #1b1300; }
 
 /* ---------- Toolbar (search / filter / sort) ---------- */
 
@@ -425,6 +556,18 @@ h2 {
 .toolbar-actions {
   display: flex;
   gap: 8px;
+}
+
+/* Beside the fridge the list column is narrower, so on desktop the search gets its own
+   row and the three filters share the second one without their labels being cut off. */
+@media (min-width: 901px) {
+  .home .toolbar {
+    grid-template-columns: repeat(3, minmax(0, 1fr)) auto;
+  }
+
+  .home .toolbar-search {
+    grid-column: 1 / -1;
+  }
 }
 
 input,
@@ -1359,6 +1502,36 @@ input[type="file"]::file-selector-button:hover {
 /* ---------- Responsive ---------- */
 
 @media (max-width: 900px) {
+  /* No room for a side column: the fridge becomes a short one above the list.
+     minmax(0, 1fr) because a plain 1fr column can't shrink below its content and overflows. */
+  .home {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 20px;
+  }
+
+  .fridge {
+    position: static;
+  }
+
+  .fridge-main {
+    min-height: 0;
+    padding: 18px 44px 20px 18px;
+  }
+
+  .fridge-main .fridge-handle {
+    height: 60px;
+  }
+
+  .magnets {
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+
+  .fridge-feet {
+    display: none;
+  }
+
   .toolbar {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
@@ -1378,10 +1551,6 @@ input[type="file"]::file-selector-button:hover {
     padding-top: 20px;
   }
 
-  .hero {
-    margin-bottom: 20px;
-  }
-
   .eyebrow {
     font-size: 0.6875rem;
     letter-spacing: 0.12em;
@@ -1391,9 +1560,13 @@ input[type="file"]::file-selector-button:hover {
     font-size: 1.5rem;
   }
 
-  .shelf-legend {
-    gap: 4px 16px;
+  .magnet {
+    padding: 6px 12px 8px;
     font-size: 0.875rem;
+  }
+
+  .magnet strong {
+    font-size: 1.125rem;
   }
 
   /* Fade the right edge of the tab bar so it's clear there's more to scroll to. */

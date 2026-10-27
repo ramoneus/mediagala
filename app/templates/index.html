@@ -5,33 +5,49 @@
   <div class="flash" role="status">{{ flash }}</div>
 {% endif %}
 
-<section class="hero">
-  <div class="shelf-head">
-    <h1 class="shelf-title">The fridge</h1>
-    <span class="shelf-count">{{ stats.total }} {{ "title" if stats.total == 1 else "titles" }} chilling</span>
-  </div>
-  {% if stats.total %}
-    {# What the collection is made of, as one bar: like the milk level in a carton. #}
-    {% set segments = [
-      ("finished", "Finished", stats.finished),
-      ("progress", "In progress", stats.in_progress),
-      ("planned", "Planned", stats.planned),
-      ("dropped", "Dropped", stats.dropped),
-    ] %}
-    <div class="shelf-bar" role="img"
-         aria-label="{% for key, label, count in segments %}{{ count }} {{ label|lower }}{{ ', ' if not loop.last }}{% endfor %}">
-      {% for key, label, count in segments if count %}
-        <span class="shelf-seg seg-{{ key }}" style="flex-grow: {{ count }}"></span>
-      {% endfor %}
+<div class="home">
+  {# A tall top-freezer fridge standing beside the collection (sticky while the list scrolls). #}
+  <aside class="fridge" aria-label="Collection overview">
+    <div class="fridge-freezer">
+      <h1 class="shelf-title">The fridge</h1>
+      <span class="fridge-display" title="{{ stats.total }} {{ 'title' if stats.total == 1 else 'titles' }} in the fridge">
+        <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
+          <path d="M12 2v20M3.3 7l17.4 10M3.3 17L20.7 7M9 4l3 2 3-2M9 20l3-2 3 2"/>
+        </svg>
+        <strong>{{ stats.total }}</strong> chilling
+      </span>
+      <span class="fridge-handle" aria-hidden="true"></span>
     </div>
-    <ul class="shelf-legend">
-      {% for key, label, count in segments if count or key != "dropped" %}
-        <li><span class="shelf-dot seg-{{ key }}" aria-hidden="true"></span><strong>{{ count }}</strong> {{ label|lower }}</li>
-      {% endfor %}
-    </ul>
-  {% endif %}
-</section>
+    <div class="fridge-main">
+      {% if stats.total %}
+        {% set segments = [
+          ("finished", "finished", stats.finished, "watched"),
+          ("progress", "in progress", stats.in_progress, "watching"),
+          ("planned", "planned", stats.planned, "watchlist"),
+          ("dropped", "dropped", stats.dropped, "dropped"),
+        ] %}
+        {% set tilts = [-4, 3, -2, 4] %}
+        {# Magnets count the whole fridge, so they filter the whole fridge (all kinds). #}
+        <ul class="magnets">
+          {% for key, label, count, status_value in segments if count or key != "dropped" %}
+            {% set active = filters.status == status_value and not filters.kind %}
+            <li>
+              <a class="magnet seg-{{ key }}{% if active %} is-active{% endif %}"
+                 href="{{ '/' if active else '/?status=' ~ status_value }}"
+                 style="--tilt: {{ tilts[loop.index0 % 4] }}deg"
+                 {% if active %}aria-current="true" title="Show everything"{% else %}title="Show {{ label }} titles"{% endif %}>
+                <strong>{{ count }}</strong> {{ label }}
+              </a>
+            </li>
+          {% endfor %}
+        </ul>
+      {% endif %}
+      <span class="fridge-handle" aria-hidden="true"></span>
+    </div>
+    <div class="fridge-feet" aria-hidden="true"><span></span><span></span></div>
+  </aside>
 
+  <div class="home-main">
 <nav class="kind-tabs" aria-label="Show movies, series or both">
   {% for tab in kind_tabs %}
     <a href="{{ tab.url }}" class="kind-tab{% if tab.active %} is-active{% endif %}" {% if tab.active %}aria-current="page"{% endif %}>
@@ -106,4 +122,6 @@
     <a href="/titles/new{% if filters.kind %}?kind={{ filters.kind }}{% endif %}" class="btn btn-primary">Add a title</a>
   </div>
 {% endif %}
+  </div>
+</div>
 {% endblock %}

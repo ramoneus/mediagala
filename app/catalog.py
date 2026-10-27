@@ -201,14 +201,13 @@ EPISODIC_KINDS: tuple[Kind, ...] = tuple(kind for kind, config in KIND_CONFIG.it
 PAGED_KINDS: tuple[Kind, ...] = tuple(kind for kind, config in KIND_CONFIG.items() if config.has_pages)
 
 
-def combined_status_label(status: Status) -> str:
-    """Label for the "All" view, e.g. "Watchlist / Backlog"."""
-    labels: list[str] = []
-    for config in KIND_CONFIG.values():
-        label = config.status_labels.get(status)
-        if label and label not in labels:
-            labels.append(label)
-    return " / ".join(labels)
+# Kind-neutral names, used when all kinds are shown together (the "All" tab and the fridge magnets).
+GENERIC_STATUS_LABELS: dict[Status, str] = {
+    Status.PLANNED: "Planned",
+    Status.IN_PROGRESS: "In progress",
+    Status.FINISHED: "Finished",
+    Status.DROPPED: "Dropped",
+}
 
 
 def form_config() -> dict[str, dict]:
