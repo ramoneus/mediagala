@@ -28,7 +28,6 @@ class Stats:
     in_progress: int
     finished: int
     dropped: int
-    avg_rating: float | None
     by_kind: dict[Kind, int]
 
     @property
@@ -123,13 +122,12 @@ def delete_title(db: Session, item: Title) -> None:
 
 
 def get_stats(db: Session) -> Stats:
-    total, in_progress, finished, dropped, avg_rating = db.execute(
+    total, in_progress, finished, dropped = db.execute(
         select(
             func.count(Title.id),
             func.count(Title.id).filter(Title.status == Status.IN_PROGRESS),
             func.count(Title.id).filter(Title.status == Status.FINISHED),
             func.count(Title.id).filter(Title.status == Status.DROPPED),
-            func.avg(Title.rating),
         )
     ).one()
     counts = dict(db.execute(select(Title.kind, func.count(Title.id)).group_by(Title.kind)).tuples().all())
@@ -138,6 +136,5 @@ def get_stats(db: Session) -> Stats:
         in_progress=in_progress,
         finished=finished,
         dropped=dropped,
-        avg_rating=avg_rating,
         by_kind={kind: counts.get(kind, 0) for kind in Kind},
     )

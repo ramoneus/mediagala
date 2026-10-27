@@ -6,17 +6,29 @@
 {% endif %}
 
 <section class="hero">
-  {# Visually hidden: the page still needs one main heading for screen readers. #}
-  <h1 class="sr-only">Your MediaGala collection</h1>
-  <p class="eyebrow">Movies · Series · Anime · Games · Books</p>
+  <div class="shelf-head">
+    <h1 class="shelf-title">The fridge</h1>
+    <span class="shelf-count">{{ stats.total }} {{ "title" if stats.total == 1 else "titles" }} chilling</span>
+  </div>
   {% if stats.total %}
-    <p class="summary-line">
-      <span><strong>{{ stats.total }}</strong> {{ "title" if stats.total == 1 else "titles" }}</span> ·
-      <span><strong>{{ stats.in_progress }}</strong> in progress</span> ·
-      <span><strong>{{ stats.finished }}</strong> finished</span> ·
-      <span><strong>{{ stats.planned }}</strong> planned</span>
-      {%- if stats.avg_rating is not none %} · <span><strong><span class="star" aria-hidden="true">★</span> {{ "%.1f"|format(stats.avg_rating) }}</strong> average</span>{% endif %}
-    </p>
+    {# What the collection is made of, as one bar: like the milk level in a carton. #}
+    {% set segments = [
+      ("finished", "Finished", stats.finished),
+      ("progress", "In progress", stats.in_progress),
+      ("planned", "Planned", stats.planned),
+      ("dropped", "Dropped", stats.dropped),
+    ] %}
+    <div class="shelf-bar" role="img"
+         aria-label="{% for key, label, count in segments %}{{ count }} {{ label|lower }}{{ ', ' if not loop.last }}{% endfor %}">
+      {% for key, label, count in segments if count %}
+        <span class="shelf-seg seg-{{ key }}" style="flex-grow: {{ count }}"></span>
+      {% endfor %}
+    </div>
+    <ul class="shelf-legend">
+      {% for key, label, count in segments if count or key != "dropped" %}
+        <li><span class="shelf-dot seg-{{ key }}" aria-hidden="true"></span><strong>{{ count }}</strong> {{ label|lower }}</li>
+      {% endfor %}
+    </ul>
   {% endif %}
 </section>
 
@@ -67,9 +79,10 @@
 </form>
 
 {% if titles %}
-  <p class="result-count">
-    {{ titles|length }} {{ "title" if titles|length == 1 else "titles" }}{% if filters.active %} found{% endif %}
-  </p>
+  {# The total is already next to "Your collection"; repeat a count only for searches and filters. #}
+  {% if filters.active or filters.kind %}
+    <p class="result-count">{{ titles|length }} {{ "title" if titles|length == 1 else "titles" }}{% if filters.active %} found{% endif %}</p>
+  {% endif %}
   <div class="grid">
     {% for item in titles %}
       {% include "partials/title_card.html" %}
