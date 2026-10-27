@@ -1,8 +1,12 @@
-<div class="poster{{ ' ' ~ poster_class if poster_class }}" style="--hue: {{ (item.id * 47) % 360 }}">
+<div class="poster poster-{{ item.kind.value }}{{ ' ' ~ poster_class if poster_class }}">
   {% if item.poster_filename %}
     <img src="/posters/{{ item.poster_filename }}" alt="" loading="lazy">
   {% else %}
-    <span class="poster-initial" aria-hidden="true">{{ item.title[:1]|upper }}</span>
+    {# No image: a typeset cover in the kind's colour, decorative since the title is shown next to it. #}
+    <div class="poster-type" aria-hidden="true">
+      <span class="poster-type-title">{{ item.title }}</span>
+      <span class="poster-type-meta">{{ item.kind.label }} · {{ item.year }}</span>
+    </div>
   {% endif %}
   <span class="badge badge-{{ item.status.value }}">{{ item.status_label }}</span>
   {% if item.rating %}

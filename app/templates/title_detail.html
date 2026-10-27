@@ -80,7 +80,7 @@
         <h2 id="episodes-heading">Episodes</h2>
         <p class="episodes-summary">
           {{ item.watched_episodes }} of {{ item.total_episodes }} watched
-          {% if next %} · Up next: <strong>S{{ next[0] }} · E{{ next[1] }}</strong>{% else %} · All caught up 🎉{% endif %}
+          {% if next %} · Up next: <strong>S{{ next[0] }} · E{{ next[1] }}</strong>{% else %} · All caught up{% endif %}
         </p>
       </div>
       <div class="episodes-actions">

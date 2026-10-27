@@ -1,6 +1,6 @@
 # 🥛 MediaGala
 
-**MediaGala** is one personal tracker for **movies, TV series, anime, video games and books**, so you don't need a separate app for each. You can log, rate and organize everything you watch, play and read. It remembers which episode you stopped at, how far you got in each game and which page you're on. The dark UI is inspired by streaming platforms.
+**MediaGala** is one personal tracker for **movies, TV series, anime, video games and books**, so you don't need a separate app for each. You can log, rate and organize everything you watch, play and read. It remembers which episode you stopped at, how far you got in each game and which page you're on. The look is inspired by a milk carton, with a light and a dark theme.
 It's built with **FastAPI**, **SQLAlchemy 2.0**, **SQLite** and **Jinja2**. It renders on the server, needs no JavaScript framework, and doesn't use paid APIs or API keys.
 
 ![Home page](docs/screenshots/home.png)
@@ -35,6 +35,10 @@ It's built with **FastAPI**, **SQLAlchemy 2.0**, **SQLite** and **Jinja2**. It r
 - **Persistent storage** in a local SQLite database
 - **Server-side validation** with field-level error messages
 - **Responsive** layout for desktop, tablet and mobile
+- **Light and dark themes:**
+  - The app follows your system setting by default.
+  - The ☀️/🌙 button in the header switches theme, and the app remembers your choice.
+  - There's no flash of the wrong theme while a page loads.
 - **Custom images:** upload your own JPG, PNG or WebP image for any title, then replace or remove it later
 - **Generated "posters":** titles without an image get a unique gradient card, so no external images are needed
 

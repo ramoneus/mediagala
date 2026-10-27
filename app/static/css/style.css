@@ -1,26 +1,74 @@
 /* ==========================================================================
-   MediaGala — dark cinematic theme
+   MediaGala — "milk carton" theme: Carton Light (default) and Carton Night.
+   Every colour that differs between the two lives in these variables; the
+   theme is chosen by data-theme on <html> (set in base.html, toggled by theme.js).
+   Colours drawn on top of poster art stay fixed, because posters are dark in both.
    ========================================================================== */
 
 :root {
-  --bg: #0a0a0f;
-  --bg-elevated: #14141c;
-  --surface: #1a1a24;
-  --surface-hover: #22222e;
-  --border: #2a2a38;
-  --text: #ececf1;
-  --text-muted: #9a9aab;
-  --accent: #e50914;
-  --accent-hover: #ff1f2b;
+  color-scheme: light;
+  --bg: #eef4fa;
+  --bg-elevated: #ffffff;
+  --surface: #ffffff;
+  --surface-hover: #e6eef7;
+  --border: #d3e0ee;
+  --border-strong: #b9cde3;
+  --text: #13233a;
+  --text-soft: #3a4a60;
+  --text-muted: #5d7089;
+  --accent: #2d6fc4;
+  --accent-hover: #2159a3;
+  --on-accent: #ffffff;
+  --gold: #b7791f;
+  --success: #2f855a;
+  --success-text: #22693f;
+  --danger: #c53030;
+  --danger-text: #9b2c2c;
+  --celebrate-text: #8a6116;
+  --focus-ring: rgba(45, 111, 196, 0.22);
+  --progress-from: #2d6fc4;
+  --progress-to: #8cc8ff;
+  /* The header stays navy in both themes so the white "GALA" and milk glass always show. */
+  --header-bg: rgba(16, 33, 58, 0.97);
+  --header-border: #1d3557;
+  --brand-media: #8cc8ff;
+
+  /* Tight corners on purpose: printed-label feel rather than soft "app" cushions. */
+  --radius: 6px;
+  --radius-small: 4px;
+  --shadow: 0 10px 30px rgba(19, 45, 80, 0.12);
+  --font-body: "DM Sans", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  /* Headings use the body family in bold; only the logo gets the chubby "thick milk" face. */
+  --font-display: var(--font-body);
+  --font-logo: "Titan One", "Arial Black", sans-serif;
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #0a1220;
+  --bg-elevated: #0f1a2c;
+  --surface: #132036;
+  --surface-hover: #1a2a44;
+  --border: #233654;
+  --border-strong: #345078;
+  --text: #eef4fb;
+  --text-soft: #c6d3e4;
+  --text-muted: #8fa3bf;
+  --accent: #8cc8ff;
+  --accent-hover: #b3dbff;
+  --on-accent: #0a1a30;
   --gold: #f5c518;
   --success: #2ecc71;
+  --success-text: #a6f0c6;
   --danger: #ff4d5e;
-
-  --radius: 14px;
-  --radius-small: 8px;
+  --danger-text: #ffb3bc;
+  --celebrate-text: #ffe17a;
+  --focus-ring: rgba(140, 200, 255, 0.25);
+  --progress-from: #4a90e2;
+  --progress-to: #8cc8ff;
+  --header-bg: rgba(10, 18, 32, 0.92);
+  --header-border: var(--border);
   --shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
-  --font-display: "Bebas Neue", "Impact", "Arial Narrow", sans-serif;
-  --font-body: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
 }
 
 *,
@@ -38,9 +86,7 @@ body {
   min-height: 100vh;
   display: flex;
   flex-direction: column;
-  background:
-    radial-gradient(1200px 500px at 50% -200px, rgba(229, 9, 20, 0.18), transparent 70%),
-    var(--bg);
+  background: var(--bg);
   color: var(--text);
   font-family: var(--font-body);
   font-size: 16px;
@@ -93,10 +139,10 @@ h2 {
   position: sticky;
   top: 0;
   z-index: 10;
-  background: rgba(10, 10, 15, 0.8);
+  background: var(--header-bg);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
-  border-bottom: 1px solid var(--border);
+  border-bottom: 1px solid var(--header-border);
 }
 
 .header-inner {
@@ -112,9 +158,10 @@ h2 {
   align-items: center;
   gap: 10px;
   text-decoration: none;
-  font-family: var(--font-display);
-  font-size: 1.75rem;
-  letter-spacing: 0.04em;
+  font-family: var(--font-logo);
+  font-size: 1.625rem;
+  font-weight: 400; /* Titan One has a single, already heavy weight */
+  letter-spacing: 0.01em;
 }
 
 .brand-logo {
@@ -128,15 +175,55 @@ h2 {
 
 .brand-name {
   line-height: 1;
-  padding-top: 3px; /* Bebas Neue sits slightly high */
 }
 
 .brand-gala {
   color: #fff;
 }
 
+/* A thin, rounded "MEDIA" next to the thick Titan One "GALA", so the milk looks creamy. */
 .brand-media {
-  color: var(--accent);
+  color: var(--brand-media);
+  font-family: "Fredoka", var(--font-body);
+  font-weight: 450;
+  font-size: 1.03em;
+  letter-spacing: 0.02em;
+}
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Light/dark switch. The header is navy in both themes, so the button uses fixed light colours. */
+.theme-toggle {
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  padding: 0;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: var(--radius-small);
+  background: transparent;
+  color: #e6eef7;
+  cursor: pointer;
+  transition: background-color 0.15s, border-color 0.15s;
+}
+
+.theme-toggle:hover {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.35);
+}
+
+/* Show the moon in light mode (switch to dark) and the sun in dark mode (switch to light). */
+.theme-toggle .icon-sun,
+[data-theme="dark"] .theme-toggle .icon-moon {
+  display: none;
+}
+
+[data-theme="dark"] .theme-toggle .icon-sun {
+  display: block;
 }
 
 .site-footer {
@@ -171,7 +258,7 @@ h2 {
 
 .btn:hover {
   background: var(--surface-hover);
-  border-color: #3a3a4c;
+  border-color: var(--border-strong);
 }
 
 .btn:active {
@@ -181,7 +268,7 @@ h2 {
 .btn-primary {
   background: var(--accent);
   border-color: var(--accent);
-  color: #fff;
+  color: var(--on-accent);
 }
 
 .btn-primary:hover {
@@ -213,14 +300,14 @@ h2 {
   border-radius: var(--radius-small);
   border: 1px solid rgba(46, 204, 113, 0.4);
   background: rgba(46, 204, 113, 0.1);
-  color: #a6f0c6;
+  color: var(--success-text);
   animation: fade-in 0.3s ease-out;
 }
 
 .flash-error {
   border-color: rgba(255, 77, 94, 0.45);
   background: rgba(255, 77, 94, 0.1);
-  color: #ffb3bc;
+  color: var(--danger-text);
 }
 
 @keyframes fade-in {
@@ -228,7 +315,7 @@ h2 {
   to { opacity: 1; transform: none; }
 }
 
-/* ---------- Hero & stats ---------- */
+/* ---------- Hero & summary ---------- */
 
 .hero {
   margin-bottom: 32px;
@@ -243,44 +330,25 @@ h2 {
   text-transform: uppercase;
 }
 
-.hero h1 {
-  font-family: var(--font-display);
-  font-weight: 400;
-  font-size: clamp(2.5rem, 7vw, 4.25rem);
-  letter-spacing: 0.02em;
-}
-
-.accent {
+/* The collection's numbers as one readable sentence instead of a row of dashboard tiles. */
+.summary-line {
+  margin: 0;
   color: var(--text-muted);
+  font-size: 1.1875rem;
 }
 
-.stats {
-  display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
-  gap: 12px;
-  margin: 28px 0 0;
+.summary-line strong {
+  color: var(--text);
+  font-weight: 700;
 }
 
-.stat {
-  padding: 16px 18px;
-  background: var(--bg-elevated);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
+/* Each "number + label" stays together when the line wraps. */
+.summary-line > span {
+  white-space: nowrap;
 }
 
-.stat dt {
-  color: var(--text-muted);
-  font-size: 0.8125rem;
-  font-weight: 500;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-}
-
-.stat dd {
-  margin: 4px 0 0;
-  font-family: var(--font-display);
-  font-size: 2.25rem;
-  line-height: 1;
+.summary-line .star {
+  color: var(--gold);
 }
 
 /* ---------- Toolbar (search / filter / sort) ---------- */
@@ -321,7 +389,7 @@ select:focus,
 textarea:focus {
   outline: none;
   border-color: var(--accent);
-  box-shadow: 0 0 0 3px rgba(229, 9, 20, 0.25);
+  box-shadow: 0 0 0 3px var(--focus-ring);
 }
 
 input[type="search"] {
@@ -376,42 +444,66 @@ textarea {
 
 .card:hover {
   transform: translateY(-4px);
-  border-color: #3a3a4c;
+  border-color: var(--border-strong);
   box-shadow: var(--shadow);
 }
 
-/* Generated "poster": a unique gradient per movie — no external images needed. */
+/* Poster area. Without an uploaded image it becomes a typeset cover: one solid colour
+   per kind (from the carton palette) with the title set on it, like a minimal print. */
 .poster {
-  --hue: 0;
+  --poster-bg: #16294a;
   position: relative;
   aspect-ratio: 16 / 10;
-  display: grid;
-  place-items: center;
-  background:
-    radial-gradient(circle at 30% 20%, hsl(var(--hue) 70% 45% / 0.9), transparent 60%),
-    radial-gradient(circle at 80% 90%, hsl(calc(var(--hue) + 60) 70% 35% / 0.85), transparent 55%),
-    linear-gradient(160deg, hsl(var(--hue) 40% 18%), #0d0d14);
+  background: var(--poster-bg);
   overflow: hidden;
 }
 
-.poster::after {
+.poster-movie { --poster-bg: #16294a; }
+.poster-series { --poster-bg: #1f4f8f; }
+.poster-anime { --poster-bg: #3b3577; }
+.poster-game { --poster-bg: #17505a; }
+.poster-book { --poster-bg: #5a4632; }
+
+/* Darkens the bottom of uploaded images so the rating stays readable. */
+.poster:has(img)::after {
   content: "";
   position: absolute;
   inset: 0;
-  background: linear-gradient(to top, rgba(10, 10, 15, 0.85), transparent 55%);
+  background: linear-gradient(to top, rgba(10, 10, 15, 0.7), transparent 50%);
 }
 
-.poster-initial {
+.poster-type {
+  position: absolute;
+  inset: 10px;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  gap: 6px;
+  padding: 40px 14px 12px;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  border-radius: 2px;
+  color: #f4f8fd;
+}
+
+.poster-type-title {
   font-family: var(--font-display);
-  font-size: 5.5rem;
-  line-height: 1;
-  color: rgba(255, 255, 255, 0.88);
-  text-shadow: 0 4px 24px rgba(0, 0, 0, 0.4);
-  transition: transform 0.3s ease;
+  font-size: 1.5rem;
+  font-weight: 800;
+  line-height: 1.1;
+  letter-spacing: -0.025em;
+  overflow-wrap: anywhere;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 
-.card:hover .poster-initial {
-  transform: scale(1.08);
+.poster-type-meta {
+  color: rgba(244, 248, 253, 0.65);
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
 }
 
 /* User-uploaded image fills the poster area; the gradient overlay keeps badges readable. */
@@ -433,17 +525,18 @@ textarea {
 .rating {
   position: absolute;
   z-index: 1;
-  padding: 4px 10px;
-  border-radius: 999px;
+  padding: 4px 8px;
+  border-radius: 3px;
   font-size: 0.75rem;
   font-weight: 700;
   backdrop-filter: blur(6px);
   -webkit-backdrop-filter: blur(6px);
 }
 
+/* Sits inside the typeset cover's frame line (which is inset 10px). */
 .badge {
-  top: 12px;
-  left: 12px;
+  top: 18px;
+  left: 18px;
   text-transform: uppercase;
   letter-spacing: 0.06em;
 }
@@ -456,7 +549,7 @@ textarea {
 
 .badge-watchlist {
   background: rgba(10, 10, 15, 0.55);
-  color: var(--text);
+  color: #fff;
   border: 1px solid rgba(255, 255, 255, 0.25);
 }
 
@@ -464,7 +557,7 @@ textarea {
   right: 12px;
   bottom: 12px;
   background: rgba(10, 10, 15, 0.7);
-  color: var(--gold);
+  color: #f5c518; /* on dark poster art in both themes */
   font-size: 0.875rem;
 }
 
@@ -492,7 +585,7 @@ textarea {
 
 .card-description {
   margin: 10px 0 0;
-  color: #c4c4d0;
+  color: var(--text-soft);
   font-size: 0.9rem;
   display: -webkit-box;
   -webkit-line-clamp: 3;
@@ -523,8 +616,9 @@ textarea {
 }
 
 .empty-icon {
-  margin: 0;
-  font-size: 2.5rem;
+  display: block;
+  margin: 0 auto 4px;
+  color: var(--text-muted);
 }
 
 .empty h2,
@@ -541,6 +635,7 @@ textarea {
   margin: 0;
   font-family: var(--font-display);
   font-size: 5rem;
+  font-weight: 700;
   line-height: 1;
   color: var(--accent);
 }
@@ -571,9 +666,9 @@ textarea {
 .form-page h1 {
   margin-bottom: 24px;
   font-family: var(--font-display);
-  font-weight: 400;
-  font-size: 2.75rem;
-  letter-spacing: 0.02em;
+  font-weight: 800;
+  font-size: 2rem;
+  letter-spacing: -0.03em;
 }
 
 .title-form {
@@ -663,7 +758,7 @@ textarea {
 
 .segmented input:checked + span {
   background: var(--accent);
-  color: #fff;
+  color: var(--on-accent);
 }
 
 .segmented input:focus-visible + span {
@@ -809,18 +904,18 @@ input[type="file"]::file-selector-button:hover {
 .flash-celebrate {
   border-color: rgba(245, 197, 24, 0.45);
   background: rgba(245, 197, 24, 0.1);
-  color: #ffe17a;
+  color: var(--celebrate-text);
 }
 
 /* ---------- Movies / Series tabs ---------- */
 
+/* Underlined tabs, like a magazine section bar, instead of pill buttons. */
 .kind-tabs {
   display: flex;
-  gap: 8px;
-  margin-bottom: 12px;
-  /* Scrolls sideways on narrow screens; the scrollbar is hidden so it doesn't overlap the pills,
-     and a little padding keeps focus outlines from being clipped. */
-  padding: 3px;
+  gap: 28px;
+  margin-bottom: 16px;
+  border-bottom: 1px solid var(--border);
+  /* Scrolls sideways on narrow screens, with the scrollbar hidden. */
   overflow-x: auto;
   scrollbar-width: none;
 }
@@ -831,39 +926,35 @@ input[type="file"]::file-selector-button:hover {
 
 .kind-tab {
   display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  padding: 8px 16px;
-  border: 1px solid var(--border);
-  border-radius: 999px;
+  align-items: baseline;
+  gap: 6px;
+  padding: 10px 0 9px;
+  border-bottom: 2px solid transparent;
   color: var(--text-muted);
   font-size: 0.9375rem;
   font-weight: 600;
   text-decoration: none;
   white-space: nowrap;
-  transition: background-color 0.15s, border-color 0.15s, color 0.15s;
+  transition: border-color 0.15s, color 0.15s;
 }
 
 .kind-tab span {
-  padding: 1px 8px;
-  border-radius: 999px;
-  background: var(--surface);
+  color: var(--text-muted);
   font-size: 0.75rem;
+  font-weight: 500;
 }
 
 .kind-tab:hover {
   color: var(--text);
-  border-color: #3a3a4c;
 }
 
 .kind-tab.is-active {
-  background: var(--text);
-  border-color: var(--text);
-  color: var(--bg);
+  color: var(--text);
+  border-bottom-color: var(--accent);
 }
 
 .kind-tab.is-active span {
-  background: rgba(10, 10, 15, 0.12);
+  color: var(--accent);
 }
 
 /* ---------- Series on cards ---------- */
@@ -896,7 +987,7 @@ input[type="file"]::file-selector-button:hover {
 .card-author,
 .detail-author {
   margin: 4px 0 0;
-  color: #c4c4d0;
+  color: var(--text-soft);
   font-style: italic;
 }
 
@@ -940,7 +1031,7 @@ input[type="file"]::file-selector-button:hover {
 .completion-tag {
   padding: 2px 8px;
   border: 1px solid var(--border);
-  border-radius: 999px;
+  border-radius: 3px;
   color: var(--text);
   font-size: 0.75rem;
   font-weight: 600;
@@ -948,7 +1039,7 @@ input[type="file"]::file-selector-button:hover {
 
 .completion-story_dlc {
   border-color: rgba(46, 204, 113, 0.5);
-  color: #8ff0b8;
+  color: var(--success-text);
 }
 
 .completion-full {
@@ -962,7 +1053,7 @@ input[type="file"]::file-selector-button:hover {
   margin-left: 6px;
   padding: 0 6px;
   border: 1px solid var(--border);
-  border-radius: 4px;
+  border-radius: 2px;
   color: var(--text);
   font-size: 0.6875rem;
   font-weight: 700;
@@ -1008,7 +1099,7 @@ input[type="file"]::file-selector-button:hover {
 .progress-bar span {
   display: block;
   height: 100%;
-  background: linear-gradient(90deg, var(--accent), #ff6a3d);
+  background: linear-gradient(90deg, var(--progress-from), var(--progress-to));
   border-radius: inherit;
   transition: width 0.3s ease;
 }
@@ -1058,15 +1149,26 @@ input[type="file"]::file-selector-button:hover {
   border-radius: var(--radius);
 }
 
-.detail-poster .poster-initial {
-  font-size: 8rem;
+.detail-poster .poster-type {
+  inset: 16px;
+  padding: 56px 24px 20px;
+}
+
+.detail-poster .badge {
+  top: 26px;
+  left: 26px;
+}
+
+.detail-poster .poster-type-title {
+  font-size: 2.5rem;
 }
 
 .detail-info h1 {
   font-family: var(--font-display);
-  font-weight: 400;
-  font-size: clamp(2.5rem, 6vw, 3.75rem);
-  letter-spacing: 0.02em;
+  font-weight: 800;
+  font-size: clamp(2rem, 4.5vw, 3rem);
+  letter-spacing: -0.03em;
+  line-height: 1.08;
   overflow-wrap: anywhere;
 }
 
@@ -1081,7 +1183,7 @@ input[type="file"]::file-selector-button:hover {
 
 .detail-description {
   margin: 20px 0 0;
-  color: #c4c4d0;
+  color: var(--text-soft);
   white-space: pre-line;
 }
 
@@ -1114,9 +1216,9 @@ input[type="file"]::file-selector-button:hover {
 
 .episodes-header h2 {
   font-family: var(--font-display);
-  font-weight: 400;
-  font-size: 2rem;
-  letter-spacing: 0.02em;
+  font-weight: 800;
+  font-size: 1.5rem;
+  letter-spacing: -0.025em;
 }
 
 .episodes-summary {
@@ -1167,7 +1269,7 @@ input[type="file"]::file-selector-button:hover {
   min-height: 40px;
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: 6px;
+  border-radius: var(--radius-small);
   color: var(--text-muted);
   font: inherit;
   font-size: 0.875rem;
@@ -1177,14 +1279,14 @@ input[type="file"]::file-selector-button:hover {
 }
 
 .episode:hover {
-  border-color: #4a4a5e;
+  border-color: var(--border-strong);
   color: var(--text);
 }
 
 .episode.is-watched {
   background: var(--accent);
   border-color: var(--accent);
-  color: #fff;
+  color: var(--on-accent);
 }
 
 .episode.is-watched:hover {
@@ -1199,10 +1301,6 @@ input[type="file"]::file-selector-button:hover {
 /* ---------- Responsive ---------- */
 
 @media (max-width: 900px) {
-  .stats {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-  }
-
   .toolbar {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
@@ -1222,7 +1320,7 @@ input[type="file"]::file-selector-button:hover {
     padding-top: 20px;
   }
 
-  /* Hero: smaller headline, and the stats become one horizontally scrolling strip. */
+  /* Hero: smaller headline and summary. */
   .hero {
     margin-bottom: 20px;
   }
@@ -1232,47 +1330,17 @@ input[type="file"]::file-selector-button:hover {
     letter-spacing: 0.12em;
   }
 
-  .hero h1 {
-    font-size: 2rem;
+  .summary-line {
+    font-size: 1rem;
   }
 
-  .stats {
-    display: flex;
-    gap: 8px;
-    margin-top: 16px;
-    overflow-x: auto;
-    scrollbar-width: none;
-  }
-
-  .stats::-webkit-scrollbar {
-    display: none;
-  }
-
-  .stat {
-    flex: 0 0 auto;
-    padding: 8px 14px;
-    border-radius: 10px;
-  }
-
-  .stat dt {
-    font-size: 0.625rem;
-  }
-
-  .stat dd {
-    font-size: 1.5rem;
-  }
-
-  /* Fade the right edge of the scrolling strips so it's clear there's more to scroll to. */
-  .stats,
+  /* Fade the right edge of the tab bar so it's clear there's more to scroll to. */
   .kind-tabs {
+    gap: 22px;
     margin-right: -16px;
     padding-right: 32px;
     mask-image: linear-gradient(to right, #000 calc(100% - 40px), transparent);
     -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 40px), transparent);
-  }
-
-  .kind-tab {
-    padding: 7px 14px;
   }
 
   /* Toolbar: search on its own row, then the filters two per row. */
@@ -1309,13 +1377,25 @@ input[type="file"]::file-selector-button:hover {
     aspect-ratio: auto;
   }
 
-  .card .poster-initial {
-    font-size: 3.25rem;
+  .card .poster-type {
+    inset: 6px;
+    /* Bottom padding leaves room for the rating badge. */
+    padding: 30px 8px 30px;
+  }
+
+  .card .poster-type-title {
+    font-size: 0.9375rem;
+    -webkit-line-clamp: 4;
+  }
+
+  /* Kind and year are already shown next to the small poster. */
+  .card .poster-type-meta {
+    display: none;
   }
 
   .card .badge {
-    top: 8px;
-    left: 8px;
+    top: 11px;
+    left: 11px;
     padding: 3px 7px;
     font-size: 0.625rem;
   }
@@ -1375,8 +1455,23 @@ input[type="file"]::file-selector-button:hover {
     flex: 1;
   }
 
+  /* Keep logo, theme switch and "Add title" on one row on narrow phones. */
+  .header-inner {
+    gap: 10px;
+  }
+
+  .brand {
+    gap: 8px;
+    font-size: 1.1875rem;
+  }
+
+  .brand-logo {
+    width: 28px;
+    height: 28px;
+  }
+
   .header-inner .btn {
-    padding: 0 14px;
+    padding: 0 12px;
   }
 }
 
