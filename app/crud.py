@@ -74,7 +74,8 @@ def _sync_seasons(item: Title, episode_counts: list[int]) -> None:
     Replacing would insert the new rows before deleting the old ones,
     which breaks the unique (title_id, number) constraint.
     """
-    for season, count in zip(item.seasons, episode_counts):
+    # strict=False on purpose: the lists differ in length when seasons are added or removed.
+    for season, count in zip(item.seasons, episode_counts, strict=False):
         season.episode_count = count
     for number in range(len(item.seasons) + 1, len(episode_counts) + 1):
         item.seasons.append(Season(number=number, episode_count=episode_counts[number - 1]))

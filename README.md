@@ -31,7 +31,7 @@ It's built with **FastAPI**, **SQLAlchemy 2.0**, **SQLite** and **Jinja2**. It r
 - **Search** by title or author (case-insensitive)
 - **Filter** by type, genre and watch status
 - **Sort** by title, release year or rating (ascending/descending), or by date added
-- **Stats:** total titles, in progress, finished, planned and average rating
+- **"The fridge":** the collection overview drawn as a fridge, with one magnet per status (finished, in progress, planned, dropped); each magnet filters the list
 - **Persistent storage** in a local SQLite database
 - **Server-side validation** with field-level error messages
 - **Responsive** layout for desktop, tablet and mobile
@@ -40,7 +40,7 @@ It's built with **FastAPI**, **SQLAlchemy 2.0**, **SQLite** and **Jinja2**. It r
   - The ☀️/🌙 button in the header switches theme, and the app remembers your choice.
   - There's no flash of the wrong theme while a page loads.
 - **Custom images:** upload your own JPG, PNG or WebP image for any title, then replace or remove it later
-- **Generated "posters":** titles without an image get a unique gradient card, so no external images are needed
+- **Typeset covers:** titles without an image get a cover in their kind's colour with the title set on it, so no external images are needed
 
 ##  Tech Stack
 

@@ -20,11 +20,11 @@ from app import crud, posters
 from app.catalog import (
     ALL_GENRES,
     EPISODIC_KINDS,
+    GENERIC_STATUS_LABELS,
     PAGED_KINDS,
     Completion,
     Kind,
     Status,
-    GENERIC_STATUS_LABELS,
     form_config,
 )
 from app.database import get_db
@@ -259,7 +259,12 @@ def index(
     stats = crud.get_stats(db)
     tab_specs = [("All", "", stats.total)] + [(k.config.plural, k.value, stats.by_kind[k]) for k in Kind]
     kind_tabs = [
-        {"label": label, "count": count, "url": index_url(**{**params, "kind": value}), "active": params["kind"] == value}
+        {
+            "label": label,
+            "count": count,
+            "url": index_url(**{**params, "kind": value}),
+            "active": params["kind"] == value,
+        }
         for label, value, count in tab_specs
     ]
 

@@ -21,12 +21,7 @@
       {% if item.kind.has_pages and item.pages %} · {{ item.pages }} pages{% endif %}
       {% if item.rating %} · <span class="star">★</span> {{ item.rating }}/10{% endif %}
     </p>
-    {% if item.kind == "game" and (item.completion or item.hours_played is not none) %}
-      <p class="game-summary">
-        {% if item.completion %}<span class="completion-tag completion-{{ item.completion.value }}">{{ item.completion.label }}</span>{% endif %}
-        {% if item.hours_played is not none %}<span>{{ item.hours_played }} h played</span>{% endif %}
-      </p>
-    {% endif %}
+    {% include "partials/game_summary.html" %}
     {% if item.description %}
       <p class="detail-description">{{ item.description }}</p>
     {% endif %}

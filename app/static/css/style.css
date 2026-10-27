@@ -20,7 +20,6 @@
   --accent-hover: #2159a3;
   --on-accent: #ffffff;
   --gold: #b7791f;
-  --success: #2f855a;
   --success-text: #22693f;
   --danger: #c53030;
   --danger-text: #9b2c2c;
@@ -64,7 +63,6 @@
   --accent-hover: #b3dbff;
   --on-accent: #0a1a30;
   --gold: #f5c518;
-  --success: #2ecc71;
   --success-text: #a6f0c6;
   --danger: #ff4d5e;
   --danger-text: #ffb3bc;
@@ -633,7 +631,9 @@ textarea {
   gap: 20px;
 }
 
+/* position: relative so the title link can cover the whole card (see .card-link). */
 .card {
+  position: relative;
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -1173,13 +1173,13 @@ input[type="file"]::file-selector-button:hover {
   border: 1px solid rgba(255, 77, 94, 0.55);
 }
 
-.card.is-dropped,
-.card.is-dropped:hover {
+.card.is-dropped {
   border-color: var(--danger);
   box-shadow: 0 0 0 1px var(--danger);
 }
 
 .card.is-dropped:hover {
+  border-color: var(--danger);
   box-shadow: 0 0 0 1px var(--danger), var(--shadow);
 }
 
@@ -1264,10 +1264,6 @@ input[type="file"]::file-selector-button:hover {
 }
 
 /* The title link covers the whole card; buttons sit above it and stay clickable. */
-.card {
-  position: relative;
-}
-
 .card-link {
   text-decoration: none;
 }

@@ -1,0 +1,7 @@
+{# How far a game was played and for how long; shared by the title card and the title page. #}
+{% if item.kind == "game" and (item.completion or item.hours_played is not none) %}
+  <p class="game-summary">
+    {% if item.completion %}<span class="completion-tag completion-{{ item.completion.value }}">{{ item.completion.label }}</span>{% endif %}
+    {% if item.hours_played is not none %}<span>{{ item.hours_played }} h played</span>{% endif %}
+  </p>
+{% endif %}
