@@ -37,6 +37,19 @@
   --fridge-sheen: rgba(255, 255, 255, 0.3);
   --handle-dark: #9fb3c9;
   --handle-light: #f7fafd;
+  --fridge-inside: #f3f8fe;
+  --fridge-liner: #e9f1fa;
+  --fridge-light: rgba(255, 244, 214, 0.75);
+  --fridge-glass: rgba(140, 200, 255, 0.55);
+  /* The "N chilling" display: a frosty light panel here, a glowing dark one at night. */
+  --display-bg: #d6e7f8;
+  --display-text: #1f4f8f;
+  --display-glow: none;
+  --display-shadow: inset 0 0 0 1px rgba(31, 79, 143, 0.14), inset 0 2px 4px rgba(19, 45, 80, 0.14),
+    0 1px 0 rgba(255, 255, 255, 0.9);
+  /* Covers: resting and lifted on hover. */
+  --cover-shadow: 0 1px 2px rgba(19, 45, 80, 0.12), 0 8px 18px rgba(19, 45, 80, 0.14);
+  --cover-shadow-hover: 0 2px 4px rgba(19, 45, 80, 0.12), 0 14px 28px rgba(19, 45, 80, 0.2);
 
   /* Tight corners on purpose: printed-label feel rather than soft "app" cushions. */
   --radius: 6px;
@@ -77,6 +90,16 @@
   --fridge-sheen: rgba(255, 255, 255, 0.07);
   --handle-dark: #34496a;
   --handle-light: #9db1cc;
+  --fridge-inside: #23365a;
+  --fridge-liner: #2a3f63;
+  --fridge-light: rgba(255, 236, 190, 0.22);
+  --fridge-glass: rgba(140, 200, 255, 0.4);
+  --display-bg: #0b1626;
+  --display-text: #8cc8ff;
+  --display-glow: 0 0 8px rgba(140, 200, 255, 0.6);
+  --display-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.5), 0 1px 0 rgba(255, 255, 255, 0.5);
+  --cover-shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 8px 18px rgba(0, 0, 0, 0.35);
+  --cover-shadow-hover: 0 2px 4px rgba(0, 0, 0, 0.4), 0 14px 28px rgba(0, 0, 0, 0.5);
   --shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
 }
 
@@ -344,27 +367,29 @@ h2 {
 }
 
 /* The home page: a tall fridge stands beside the collection instead of a wide header,
-   so the list starts at the top of the page. */
+   so the list starts at the top of the page. The wide column gap is where the fridge
+   door ends up when it's open. */
 .home {
   display: grid;
   grid-template-columns: 236px minmax(0, 1fr);
-  gap: 32px;
+  gap: 32px 64px;
   align-items: start;
 }
 
 /* "The fridge": the collection overview as a classic top-freezer fridge. The freezer holds
-   the title and a temperature-style display; the fridge door holds one magnet per status,
-   and each magnet is a filter. It stays in view while the list scrolls. */
+   the title and a temperature-style display; the fridge door holds one magnet per status
+   (each magnet is a filter), and behind it are the titles you have open right now.
+   It stays in view while the list scrolls. */
 .fridge {
   position: sticky;
   top: 88px;
   filter: drop-shadow(0 16px 26px rgba(19, 45, 80, 0.14));
 }
 
+/* White enamel, shared by the freezer door and the fridge door. */
 .fridge-freezer,
-.fridge-main {
+.door-front {
   position: relative;
-  overflow: hidden;
   background: linear-gradient(170deg, var(--fridge-top), var(--fridge-bottom));
   border: 1px solid var(--border);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.55);
@@ -372,29 +397,23 @@ h2 {
 
 /* Diagonal sheen across each door's enamel. */
 .fridge-freezer::after,
-.fridge-main::after {
+.door-front::after {
   content: "";
   position: absolute;
   inset: 0;
+  border-radius: inherit;
   background: linear-gradient(115deg, transparent 25%, var(--fridge-sheen) 35%, transparent 45%);
   pointer-events: none;
 }
 
+/* Both doors hinge on the right, next to the list, so the handles are on the left. */
 .fridge-freezer {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
   gap: 12px;
-  padding: 22px 44px 22px 20px;
+  padding: 22px 20px 22px 44px;
   border-radius: 22px 22px 6px 6px;
-}
-
-/* The small gap between the two doors is the seam between freezer and fridge. */
-.fridge-main {
-  min-height: 320px;
-  margin-top: 4px;
-  padding: 26px 44px 30px 20px;
-  border-radius: 6px 6px 20px 20px;
 }
 
 .shelf-title {
@@ -404,16 +423,16 @@ h2 {
   letter-spacing: -0.03em;
 }
 
-/* Little digital display, like a fridge's temperature panel (dark in both themes). */
+/* Little digital display, like a fridge's temperature panel (colours follow the theme). */
 .fridge-display {
   display: inline-flex;
   align-items: center;
   gap: 8px;
   padding: 7px 12px;
   border-radius: 8px;
-  background: #0b1626;
-  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.5), 0 1px 0 rgba(255, 255, 255, 0.5);
-  color: #8cc8ff;
+  background: var(--display-bg);
+  box-shadow: var(--display-shadow);
+  color: var(--display-text);
   font-size: 0.75rem;
   font-weight: 700;
   letter-spacing: 0.12em;
@@ -424,17 +443,17 @@ h2 {
   font-size: 1rem;
   font-variant-numeric: tabular-nums;
   letter-spacing: 0.04em;
-  text-shadow: 0 0 8px rgba(140, 200, 255, 0.6);
+  text-shadow: var(--display-glow);
 }
 
 /* Chunky handles near the seam (low on the freezer, high on the fridge), each on two mounts. */
 .fridge-handle {
   position: absolute;
-  right: 16px;
+  left: 16px;
   width: 12px;
   border-radius: 8px;
   background: linear-gradient(90deg, var(--handle-dark), var(--handle-light) 45%, var(--handle-dark));
-  box-shadow: 3px 4px 8px rgba(0, 0, 0, 0.22);
+  box-shadow: -3px 4px 8px rgba(0, 0, 0, 0.22);
 }
 
 .fridge-handle::before,
@@ -458,9 +477,189 @@ h2 {
   height: 52px;
 }
 
-.fridge-main .fridge-handle {
+.door-front .fridge-handle {
   top: 14px;
   height: 110px;
+}
+
+/* The handle on the fridge door is a real button (the whole door also opens on click). */
+.fridge-handle-button {
+  z-index: 1;
+  padding: 0;
+  border: 0;
+  cursor: pointer;
+}
+
+.fridge-handle-button:focus-visible {
+  outline: 3px solid var(--gold);
+  outline-offset: 3px;
+}
+
+/* The fridge compartment. The inside and the door share one grid cell, so the box is as
+   tall as whichever needs more room. The door is hinged on the right and opens to 90
+   degrees, into the gap beside the list. The viewpoint (perspective-origin) is to the left
+   of the fridge, so even at 90 degrees you see the inner side of the door with its bins,
+   and the open door never needs more room than that gap. */
+.fridge-main {
+  display: grid;
+  min-height: 320px;
+  margin-top: 4px; /* the seam between freezer and fridge */
+  perspective: 1800px;
+  perspective-origin: -40% 50%;
+}
+
+.fridge-inside,
+.fridge-door {
+  grid-area: 1 / 1;
+}
+
+.fridge-inside {
+  position: relative;
+  padding: 22px 18px 24px;
+  border: 1px solid var(--border);
+  border-radius: 6px 6px 20px 20px;
+  background: var(--fridge-inside);
+  box-shadow: inset 0 0 0 6px rgba(255, 255, 255, 0.35), inset 0 10px 30px rgba(19, 45, 80, 0.12);
+  overflow: hidden;
+}
+
+/* The little light that comes on when the door opens. */
+.fridge-inside::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at 50% 0%, var(--fridge-light), transparent 65%);
+  opacity: 0;
+  transition: opacity 0.3s ease 0.1s;
+  pointer-events: none;
+}
+
+.fridge-main.is-open .fridge-inside::before { opacity: 1; }
+
+.fridge-inside-head {
+  position: relative;
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.fridge-inside-title,
+.fridge-close {
+  margin: 0;
+  font-size: 0.6875rem;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.fridge-inside-title { color: var(--text-muted); }
+
+.fridge-close {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--accent);
+  font-family: inherit;
+  cursor: pointer;
+}
+
+.fridge-close:hover,
+.fridge-more:hover { text-decoration: underline; }
+
+/* Glass shelves: each title sits on one. */
+.fridge-shelves {
+  position: relative;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.fridge-shelves li {
+  padding: 8px 0 10px;
+  border-bottom: 3px solid var(--fridge-glass);
+}
+
+.fridge-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 7px 10px;
+  border-left: 5px solid var(--kind-colour);
+  border-radius: 4px;
+  background: var(--surface);
+  box-shadow: 0 3px 8px rgba(19, 45, 80, 0.12);
+  color: var(--text);
+  text-decoration: none;
+}
+
+.fridge-item:hover { background: var(--surface-hover); }
+.fridge-item.kind-movie { --kind-colour: #16294a; }
+.fridge-item.kind-series { --kind-colour: #1f4f8f; }
+.fridge-item.kind-anime { --kind-colour: #3b3577; }
+.fridge-item.kind-game { --kind-colour: #17505a; }
+.fridge-item.kind-book { --kind-colour: #5a4632; }
+.fridge-item-title { font-size: 0.875rem; font-weight: 700; line-height: 1.25; }
+.fridge-item-meta { color: var(--text-muted); font-size: 0.75rem; }
+
+.fridge-more {
+  position: relative;
+  display: inline-block;
+  margin-top: 12px;
+  color: var(--accent);
+  font-size: 0.8125rem;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.fridge-empty {
+  position: relative;
+  color: var(--text-muted);
+  font-size: 0.875rem;
+}
+
+/* The door: a 3D panel with the enamel front and the inner side back to back. */
+.fridge-door {
+  position: relative;
+  cursor: pointer;
+  transform-origin: right center;
+  transform-style: preserve-3d;
+  transition: transform 0.5s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.fridge-main.is-open .fridge-door { transform: rotateY(90deg); }
+
+/* With a mouse, the door eases open a crack on hover and the light leaks out. */
+@media (hover: hover) {
+  .fridge-main:not(.is-open) .fridge-door:hover { transform: rotateY(14deg); }
+  .fridge-main:not(.is-open):has(.fridge-door:hover) .fridge-inside::before { opacity: 0.6; }
+}
+
+.door-front,
+.door-back {
+  border-radius: 6px 6px 20px 20px;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}
+
+.door-front {
+  height: 100%;
+  padding: 26px 20px 52px 44px;
+  /* The magnets are rotated, so the browser paints them on their own layer and they would
+     show (and stay clickable) through the open door. Hide the front once the door is
+     nearly open, and bring it back as soon as it starts to close. */
+  transition: visibility 0s linear 0.03s;
+}
+
+.fridge-main.is-open .door-front {
+  visibility: hidden;
+  transition-delay: 0.2s;
+}
+
+.fridge-main.no-motion .fridge-door,
+.fridge-main.no-motion .door-front,
+.fridge-main.no-motion .fridge-inside::before {
+  transition: none;
 }
 
 .magnets {
@@ -472,6 +671,73 @@ h2 {
   padding: 0;
   list-style: none;
 }
+
+/* "4 open inside ›": tells you what's behind the door before you open it. */
+.door-hint {
+  position: absolute;
+  left: 44px;
+  bottom: 18px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--accent);
+  font-size: 0.75rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.door-hint svg { transition: transform 0.2s ease; }
+.fridge-door:hover .door-hint svg { transform: translateX(3px); }
+
+/* Inner side of the door: a plastic liner with three bins holding bottles. */
+.door-back {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-evenly;
+  padding: 18px 14px;
+  border: 1px solid var(--border);
+  background: linear-gradient(180deg, var(--fridge-liner), var(--fridge-inside));
+  transform: rotateY(180deg);
+}
+
+.door-bin {
+  position: relative;
+  display: flex;
+  align-items: flex-end;
+  gap: 6px;
+  height: 58px;
+  padding: 0 10px;
+}
+
+/* The bin's clear front lip, in front of the bottles. */
+.door-bin::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 22px;
+  border: 2px solid var(--fridge-glass);
+  border-top-width: 3px;
+  border-radius: 0 0 8px 8px;
+  background: rgba(200, 228, 255, 0.45);
+}
+
+.bottle {
+  width: 16px;
+  height: 46px;
+  border-radius: 6px 6px 3px 3px;
+  box-shadow: inset -3px 0 0 rgba(0, 0, 0, 0.08);
+}
+
+.bottle.short { height: 34px; }
+.bottle.milk { background: #ffffff; border: 1px solid #d3e0ee; }
+.bottle.juice { background: #f2a83b; }
+.bottle.sauce { width: 12px; background: #d6453d; }
+.bottle.water { background: #a9d6f5; }
 
 .fridge-feet {
   display: flex;
@@ -540,20 +806,29 @@ h2 {
 
 /* ---------- Toolbar (search / filter / sort) ---------- */
 
+/* The filters sit on the page without a box around them. */
 .toolbar {
   display: grid;
   grid-template-columns: minmax(0, 2fr) repeat(3, minmax(0, 1fr)) auto;
   gap: 10px;
-  padding: 12px;
-  margin-bottom: 20px;
-  background: var(--bg-elevated);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
+  margin-bottom: 28px;
+}
+
+.toolbar input,
+.toolbar select {
+  background-color: var(--surface);
 }
 
 .toolbar-actions {
   display: flex;
   gap: 8px;
+}
+
+/* filters.js applies each change right away, so "Apply" is only for browsers without JavaScript.
+   With nothing to reset either, the buttons' cell goes, so the filters line up with the search. */
+.toolbar.auto-apply .toolbar-apply,
+.toolbar.auto-apply.toolbar-no-reset .toolbar-actions {
+  display: none;
 }
 
 /* Beside the fridge the list column is narrower, so on desktop the search gets its own
@@ -565,6 +840,10 @@ h2 {
 
   .home .toolbar-search {
     grid-column: 1 / -1;
+  }
+
+  .home .toolbar.auto-apply.toolbar-no-reset {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 }
 
@@ -625,10 +904,12 @@ textarea {
 
 /* ---------- Title cards ---------- */
 
+/* A shelf of covers: the cover is the object, with the title and one quiet line under it,
+   and no box around the card (the way Letterboxd or a game library show things). */
 .grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
-  gap: 20px;
+  grid-template-columns: repeat(auto-fill, minmax(148px, 1fr));
+  gap: 30px 20px;
 }
 
 /* position: relative so the title link can cover the whole card (see .card-link). */
@@ -636,27 +917,24 @@ textarea {
   position: relative;
   display: flex;
   flex-direction: column;
-  overflow: hidden;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
 }
 
-.card:hover {
-  transform: translateY(-4px);
-  border-color: var(--border-strong);
-  box-shadow: var(--shadow);
-}
-
-/* Poster area. Without an uploaded image it becomes a typeset cover: one solid colour
-   per kind (from the carton palette) with the title set on it, like a minimal print. */
+/* The cover. Portrait like a film poster or a book. Without an image it becomes a typeset
+   cover: one solid colour per kind (from the carton palette) with the title set on it. */
 .poster {
   --poster-bg: #16294a;
   position: relative;
-  aspect-ratio: 16 / 10;
+  aspect-ratio: 2 / 3;
   background: var(--poster-bg);
+  border-radius: 8px;
+  box-shadow: var(--cover-shadow);
   overflow: hidden;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.card:hover .poster {
+  transform: translateY(-3px);
+  box-shadow: var(--cover-shadow-hover);
 }
 
 .poster-movie { --poster-bg: #16294a; }
@@ -665,142 +943,145 @@ textarea {
 .poster-game { --poster-bg: #17505a; }
 .poster-book { --poster-bg: #5a4632; }
 
-/* Darkens the bottom of uploaded images so the rating stays readable. */
-.poster:has(img)::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(to top, rgba(10, 10, 15, 0.7), transparent 50%);
-}
-
 .poster-type {
   position: absolute;
-  inset: 10px;
+  inset: 6px;
   display: flex;
   flex-direction: column;
   justify-content: flex-end;
   gap: 6px;
-  padding: 40px 14px 12px;
+  padding: 32px 10px 10px;
   border: 1px solid rgba(255, 255, 255, 0.22);
-  border-radius: 2px;
+  border-radius: 4px;
   color: #f4f8fd;
 }
 
 .poster-type-title {
   font-family: var(--font-display);
-  font-size: 1.5rem;
+  font-size: 1.15rem;
   font-weight: 800;
   line-height: 1.1;
   letter-spacing: -0.025em;
   overflow-wrap: anywhere;
   display: -webkit-box;
-  -webkit-line-clamp: 3;
+  -webkit-line-clamp: 4;
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
 
 .poster-type-meta {
   color: rgba(244, 248, 253, 0.65);
-  font-size: 0.6875rem;
+  font-size: 0.625rem;
   font-weight: 700;
-  letter-spacing: 0.14em;
+  letter-spacing: 0.12em;
   text-transform: uppercase;
 }
 
-/* User-uploaded image fills the poster area; the gradient overlay keeps badges readable. */
 .poster img {
   position: absolute;
   inset: 0;
   width: 100%;
   height: 100%;
   object-fit: cover;
-  object-position: center 25%;
-  transition: transform 0.3s ease;
 }
 
-.card:hover .poster img {
-  transform: scale(1.04);
-}
-
+/* Status and rating: small calm chips on the cover. The dot carries the status colour,
+   so the chip itself stays the same quiet dark glass for every status. */
 .badge,
 .rating {
   position: absolute;
+  top: 10px;
   z-index: 1;
-  padding: 4px 8px;
-  border-radius: 3px;
-  font-size: 0.75rem;
-  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: rgba(10, 18, 32, 0.64);
+  color: #fff;
+  font-size: 0.6875rem;
+  font-weight: 600;
   backdrop-filter: blur(6px);
   -webkit-backdrop-filter: blur(6px);
 }
 
-/* Sits inside the typeset cover's frame line (which is inset 10px). */
 .badge {
-  top: 18px;
-  left: 18px;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
+  left: 10px;
+  padding-left: 7px;
+  letter-spacing: 0.02em;
 }
 
-.badge-watched {
-  background: rgba(46, 204, 113, 0.2);
-  color: #8ff0b8;
-  border: 1px solid rgba(46, 204, 113, 0.45);
+.badge::before {
+  content: "";
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  margin-right: 5px;
+  border-radius: 50%;
+  vertical-align: 1px;
+  background: var(--status-dot, #8cc8ff);
 }
 
-.badge-watchlist {
-  background: rgba(10, 10, 15, 0.55);
-  color: #fff;
-  border: 1px solid rgba(255, 255, 255, 0.25);
-}
+.badge-watched { --status-dot: #4ade80; }
+.badge-watching { --status-dot: #f5c518; }
+.badge-dropped { --status-dot: #ff6b7a; }
 
 .rating {
-  right: 12px;
-  bottom: 12px;
-  background: rgba(10, 10, 15, 0.7);
-  color: #f5c518; /* on dark poster art in both themes */
-  font-size: 0.875rem;
+  right: 10px;
+  color: #f5c518; /* on dark glass in both themes */
+  font-size: 0.75rem;
 }
 
-.rating small {
-  color: var(--text-muted);
-  font-weight: 500;
+/* Progress along the bottom edge of the cover, like a "continue watching" row. */
+.poster-progress {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 1;
+  height: 4px;
+  background: rgba(10, 18, 32, 0.45);
+}
+
+.poster-progress span {
+  display: block;
+  height: 100%;
+  background: linear-gradient(90deg, var(--progress-from), var(--progress-to));
 }
 
 .card-body {
-  flex: 1;
-  padding: 16px 18px 8px;
+  padding: 10px 2px 0;
 }
 
 .card-title {
-  font-size: 1.125rem;
-  font-weight: 700;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  line-height: 1.3;
   overflow-wrap: anywhere;
-}
-
-.card-meta {
-  margin: 6px 0 0;
-  color: var(--text-muted);
-  font-size: 0.875rem;
-}
-
-.card-description {
-  margin: 10px 0 0;
-  color: var(--text-soft);
-  font-size: 0.9rem;
   display: -webkit-box;
-  -webkit-line-clamp: 3;
+  -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
 
-.card-actions {
-  display: flex;
-  gap: 8px;
-  padding: 12px 18px 18px;
+.card-meta {
+  margin: 2px 0 0;
+  color: var(--text-muted);
+  font-size: 0.8125rem;
 }
 
-.card-actions form {
+/* Episodes so far and the quick "next episode" button (above the title link, so it's clickable). */
+.card-progress {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4px 8px;
+  margin-top: 6px;
+  color: var(--text-muted);
+  font-size: 0.75rem;
+}
+
+.card-progress form {
   margin: 0;
 }
 
@@ -989,7 +1270,8 @@ input[type="file"]::file-selector-button:hover {
   background: var(--surface-hover);
 }
 
-.current-poster {
+.current-poster,
+.online-poster {
   display: flex;
   align-items: center;
   flex-wrap: wrap;
@@ -997,12 +1279,94 @@ input[type="file"]::file-selector-button:hover {
   margin-bottom: 4px;
 }
 
-.current-poster img {
-  width: 128px;
-  aspect-ratio: 16 / 10;
+.current-poster img,
+.online-poster img {
+  width: 84px;
+  aspect-ratio: 2 / 3;
   object-fit: cover;
+  border-radius: 6px;
+  box-shadow: var(--cover-shadow);
+}
+
+.online-poster[hidden] {
+  display: none;
+}
+
+.online-poster span {
+  color: var(--text-muted);
+  font-size: 0.875rem;
+}
+
+/* "Find it online": a search box whose results drop down below it. */
+.lookup {
+  padding: 14px;
+  background: var(--bg-elevated);
+  border: 1px dashed var(--border-strong);
+  border-radius: var(--radius);
+}
+
+.lookup[hidden] {
+  display: none;
+}
+
+.lookup-results {
+  margin: 8px 0 0;
+  padding: 4px;
+  list-style: none;
+  background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius-small);
+  box-shadow: var(--shadow);
+}
+
+.lookup-result {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 6px 8px;
+  border: 0;
+  border-radius: var(--radius-small);
+  background: none;
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.lookup-result:hover,
+.lookup-result:focus-visible {
+  background: var(--surface-hover);
+}
+
+.lookup-result img {
+  flex: none;
+  width: 36px;
+  height: 52px;
+  object-fit: cover;
+  border-radius: 3px;
+  background: var(--border);
+}
+
+.lookup-result span {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.lookup-result small {
+  color: var(--text-muted);
+}
+
+/* Credit line some services ask for (e.g. TMDB). */
+.lookup-notice {
+  margin: 6px 0 0;
+  color: var(--text-muted);
+  font-size: 0.75rem;
+}
+
+.lookup-notice:empty {
+  display: none;
 }
 
 .form-field .checkbox {
@@ -1158,29 +1522,18 @@ input[type="file"]::file-selector-button:hover {
   color: var(--accent);
 }
 
-/* ---------- Series on cards ---------- */
+/* ---------- Dropped titles ---------- */
 
-.badge-watching {
-  background: rgba(245, 197, 24, 0.18);
-  color: #ffe17a;
-  border: 1px solid rgba(245, 197, 24, 0.45);
+/* A red frame around the cover, and the cover fades. */
+.card.is-dropped .poster {
+  outline: 2px solid var(--danger);
+  outline-offset: 3px;
 }
 
-/* Dropped series and games get a red badge and a red frame around the card. */
-.badge-dropped {
-  background: rgba(255, 77, 94, 0.2);
-  color: #ffb3bc;
-  border: 1px solid rgba(255, 77, 94, 0.55);
-}
-
-.card.is-dropped {
-  border-color: var(--danger);
-  box-shadow: 0 0 0 1px var(--danger);
-}
-
-.card.is-dropped:hover {
-  border-color: var(--danger);
-  box-shadow: 0 0 0 1px var(--danger), var(--shadow);
+.card.is-dropped .poster img,
+.card.is-dropped .poster-type {
+  filter: grayscale(0.7);
+  opacity: 0.8;
 }
 
 /* ---------- Books ---------- */
@@ -1193,7 +1546,8 @@ input[type="file"]::file-selector-button:hover {
 }
 
 .card-author {
-  font-size: 0.875rem;
+  margin-top: 2px;
+  font-size: 0.8125rem;
 }
 
 .detail-author {
@@ -1249,21 +1603,7 @@ input[type="file"]::file-selector-button:hover {
   color: var(--gold);
 }
 
-.kind-tag {
-  display: inline-block;
-  margin-left: 6px;
-  padding: 0 6px;
-  border: 1px solid var(--border);
-  border-radius: 2px;
-  color: var(--text);
-  font-size: 0.6875rem;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  vertical-align: 1px;
-}
-
-/* The title link covers the whole card; buttons sit above it and stay clickable. */
+/* The title link covers the whole card; the "next episode" button sits above it and stays clickable. */
 .card-link {
   text-decoration: none;
 }
@@ -1273,16 +1613,6 @@ input[type="file"]::file-selector-button:hover {
   position: absolute;
   inset: 0;
   z-index: 1;
-}
-
-.card-actions,
-.series-progress form {
-  position: relative;
-  z-index: 2;
-}
-
-.series-progress {
-  margin-top: 12px;
 }
 
 .progress-bar {
@@ -1301,29 +1631,12 @@ input[type="file"]::file-selector-button:hover {
   transition: width 0.3s ease;
 }
 
-.progress-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  margin-top: 8px;
-  color: var(--text-muted);
-  font-size: 0.8125rem;
-}
-
-.progress-row form {
-  margin: 0;
-}
-
-.series-summary {
-  margin: 0;
-  color: var(--text-muted);
-  font-size: 0.8125rem;
-}
-
 .btn-next {
+  min-height: 0;
+  padding: 2px 8px;
   border-color: rgba(245, 197, 24, 0.45);
   color: var(--gold);
+  font-size: 0.75rem;
 }
 
 .btn-next:hover {
@@ -1333,31 +1646,32 @@ input[type="file"]::file-selector-button:hover {
 
 /* ---------- Title detail page ---------- */
 
+/* The cover at a portrait size on the left, everything about the title on the right. */
 .detail {
   display: grid;
-  grid-template-columns: minmax(0, 5fr) minmax(0, 6fr);
-  gap: 32px;
+  grid-template-columns: minmax(0, 300px) minmax(0, 1fr);
+  gap: 40px;
   align-items: start;
   margin-bottom: 32px;
 }
 
-.detail-poster {
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-}
-
 .detail-poster .poster-type {
-  inset: 16px;
-  padding: 56px 24px 20px;
+  inset: 10px;
+  padding: 56px 20px 18px;
 }
 
 .detail-poster .badge {
-  top: 26px;
-  left: 26px;
+  top: 16px;
+  left: 16px;
+}
+
+.detail-poster .rating {
+  top: 16px;
+  right: 16px;
 }
 
 .detail-poster .poster-type-title {
-  font-size: 2.5rem;
+  font-size: 1.875rem;
 }
 
 .detail-info h1 {
@@ -1495,6 +1809,255 @@ input[type="file"]::file-selector-button:hover {
   color: var(--gold);
 }
 
+/* ---------- Quick add (the "+ Add title" search) ---------- */
+
+/* The panel hangs under the "+ Add title" button, over a light dimming of the page. */
+.header-inner {
+  position: relative;
+}
+
+.quick-add {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 16px;
+  z-index: 30;
+  width: min(480px, calc(100vw - 32px));
+  max-height: calc(100vh - 96px);
+  overflow-y: auto;
+  padding: 16px;
+  background: var(--surface);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: 0 18px 50px rgba(10, 18, 32, 0.28);
+}
+
+.quick-add[hidden],
+.quick-add-backdrop[hidden] {
+  display: none;
+}
+
+.quick-add-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 9; /* under the sticky header (10), so the panel in it stays on top */
+  background: rgba(16, 33, 58, 0.22);
+}
+
+.quick-add-search {
+  display: flex;
+  gap: 8px;
+}
+
+/* The browser's own "clear" cross would sit right next to the panel's close button. */
+.quick-add-search input::-webkit-search-cancel-button {
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+.quick-add-close {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 42px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-small);
+  background: none;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.quick-add-close:hover {
+  color: var(--text);
+  background: var(--surface-hover);
+}
+
+.quick-add-kinds {
+  display: flex;
+  gap: 18px;
+  margin: 12px 2px 4px;
+  overflow-x: auto;
+}
+
+.quick-add-kinds button {
+  padding: 0 0 4px;
+  border: 0;
+  background: none;
+  color: var(--text-muted);
+  font: inherit;
+  font-size: 0.875rem;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.quick-add-kinds button:hover,
+.quick-add-kinds button[aria-pressed="true"] {
+  color: var(--text);
+}
+
+.quick-add-kinds button[aria-pressed="true"] {
+  box-shadow: inset 0 -2px 0 var(--accent);
+}
+
+.quick-add-results {
+  margin: 8px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.quick-add-results:empty,
+.quick-add-status:empty,
+.quick-add-credit:empty {
+  display: none;
+}
+
+.qa-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 6px;
+  border-radius: var(--radius-small);
+}
+
+.qa-row:hover {
+  background: var(--surface-hover);
+}
+
+.qa-thumb {
+  flex: none;
+  width: 38px;
+  height: 56px;
+  border-radius: 3px;
+  background: var(--border);
+  object-fit: cover;
+}
+
+.qa-text {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.qa-text strong {
+  overflow: hidden;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.qa-text small {
+  color: var(--text-muted);
+}
+
+.qa-add {
+  flex: none;
+  padding: 7px 12px;
+  border: 0;
+  border-radius: var(--radius-small);
+  background: var(--accent);
+  color: var(--on-accent);
+  font: inherit;
+  font-size: 0.8125rem;
+  font-weight: 700;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.qa-add:hover {
+  background: var(--accent-hover);
+}
+
+.qa-add:disabled {
+  opacity: 0.6;
+  cursor: progress;
+}
+
+.qa-more {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-small);
+  color: var(--text);
+  font-weight: 800;
+  text-decoration: none;
+}
+
+.qa-more:hover {
+  background: var(--surface);
+}
+
+.qa-done {
+  flex: none;
+  color: var(--success-text);
+  font-size: 0.8125rem;
+  font-weight: 700;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.qa-done:hover {
+  text-decoration: underline;
+}
+
+.quick-add-status {
+  margin: 8px 2px 0;
+  color: var(--text-muted);
+  font-size: 0.8125rem;
+}
+
+.quick-add-foot {
+  margin-top: 10px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+}
+
+.quick-add-manual {
+  color: var(--accent);
+  font-size: 0.9375rem;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.quick-add-manual:hover {
+  text-decoration: underline;
+}
+
+.quick-add-credit {
+  margin: 6px 0 0;
+  color: var(--text-muted);
+  font-size: 0.6875rem;
+}
+
+/* Titles the quick add just put in the fridge get a ring for this visit. */
+.card.is-new .poster {
+  box-shadow: 0 0 0 3px var(--accent), var(--cover-shadow-hover);
+}
+
+/* "Undo" in a message: a button that reads like a link. */
+.inline-form {
+  display: inline;
+  margin: 0;
+}
+
+.link-button {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.flash a {
+  color: inherit;
+}
+
 /* ---------- Responsive ---------- */
 
 @media (max-width: 900px) {
@@ -1509,13 +2072,47 @@ input[type="file"]::file-selector-button:hover {
     position: static;
   }
 
-  .fridge-main {
-    min-height: 0;
-    padding: 18px 44px 20px 18px;
+  /* The short fridge is as wide as the page, so a stronger perspective seen from its middle
+     keeps the open door narrow. The door may still reach past the screen edge, which is
+     clipped rather than allowed to scroll the page sideways. */
+  body {
+    overflow-x: clip;
   }
 
-  .fridge-main .fridge-handle {
+  .fridge-main {
+    min-height: 0;
+    perspective: 2400px;
+    perspective-origin: 50% 50%;
+  }
+
+  .fridge-inside {
+    padding: 16px 16px 18px;
+  }
+
+  .door-front {
+    padding: 18px 18px 46px 44px;
+  }
+
+  .door-front .fridge-handle {
     height: 60px;
+  }
+
+  /* The open shelves become one row you can scroll sideways. */
+  .fridge-shelves {
+    display: flex;
+    gap: 10px;
+    overflow-x: auto;
+  }
+
+  .fridge-shelves li {
+    display: flex;
+    flex: 0 0 auto;
+    max-width: 70%;
+    padding: 0 0 10px;
+  }
+
+  .fridge-item {
+    flex: 1;
   }
 
   .magnets {
@@ -1578,82 +2175,88 @@ input[type="file"]::file-selector-button:hover {
   .toolbar {
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 8px;
-    padding: 10px;
   }
 
   .toolbar-actions {
     grid-column: auto;
   }
 
-  /* Cards become compact rows: a small poster on the left, details on the right. */
+  /* Alone on its row (no Reset button next to it), the sort takes the full width. */
+  .toolbar.auto-apply.toolbar-no-reset .toolbar-sort {
+    grid-column: 1 / -1;
+  }
+
+  /* Three covers per row, like a shelf. */
   .grid {
-    grid-template-columns: 1fr;
-    gap: 12px;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 22px 12px;
   }
 
-  .card {
-    display: grid;
-    grid-template-columns: 112px minmax(0, 1fr);
-    grid-template-rows: 1fr auto;
-  }
-
-  .card:hover {
+  .card:hover .poster {
     transform: none;
   }
 
-  .card > .poster {
-    grid-row: 1 / 3;
-    height: 100%;
-    min-height: 168px;
-    aspect-ratio: auto;
-  }
-
   .card .poster-type {
-    inset: 6px;
-    /* Bottom padding leaves room for the rating badge. */
-    padding: 30px 8px 30px;
+    inset: 4px;
+    padding: 24px 6px 6px;
   }
 
   .card .poster-type-title {
-    font-size: 0.9375rem;
-    -webkit-line-clamp: 4;
+    font-size: 0.8125rem;
   }
 
-  /* Kind and year are already shown next to the small poster. */
+  /* Year and kind are written under the cover. */
   .card .poster-type-meta {
     display: none;
   }
 
+  /* A small cover has no room for the status word next to the rating: keep its coloured dot
+     (the word stays for screen readers). */
+  .card .badge,
+  .card .rating {
+    top: 6px;
+  }
+
   .card .badge {
-    top: 11px;
-    left: 11px;
-    padding: 3px 7px;
-    font-size: 0.625rem;
+    left: 6px;
+    padding: 4px;
+    font-size: 0;
+  }
+
+  .card .badge::before {
+    margin: 0;
+    vertical-align: middle;
   }
 
   .card .rating {
-    right: 8px;
-    bottom: 8px;
-    padding: 3px 8px;
-    font-size: 0.75rem;
+    right: 6px;
+    padding: 2px 6px;
+    font-size: 0.6875rem;
   }
 
   .card-body {
-    padding: 12px 14px 6px;
+    padding-top: 8px;
   }
 
   .card-title {
-    font-size: 1rem;
-  }
-
-  .card-description {
-    margin-top: 6px;
     font-size: 0.8125rem;
-    -webkit-line-clamp: 2;
   }
 
-  .card-actions {
-    padding: 4px 14px 12px;
+  .card-author,
+  .card-meta,
+  .card-progress {
+    font-size: 0.6875rem;
+  }
+
+  .detail-poster {
+    width: min(240px, 72%);
+  }
+
+  /* On phones the quick add spans the screen under the header. */
+  .quick-add {
+    right: 8px;
+    left: 8px;
+    width: auto;
   }
 
   .title-form {
@@ -1715,258 +2318,3 @@ input[type="file"]::file-selector-button:hover {
   }
 }
 
-/* ---------- Fridge door (prototype: works on desktop; mobile version still to design) ---------- */
-:root { --fridge-inside: #f3f8fe; --fridge-liner: #e9f1fa; --fridge-light: rgba(255, 244, 214, 0.75); }
-:root[data-theme="dark"] { --fridge-inside: #23365a; --fridge-liner: #2a3f63; --fridge-light: rgba(255, 236, 190, 0.22); }
-
-/* The swung-out door may poke past the page edge on phones; clip it without a sideways scroll. */
-body { overflow-x: clip; }
-
-/* The fridge compartment is now a box (the inside) with the door laid over it. */
-.fridge-main {
-  overflow: visible;
-  padding: 0;
-  background: none;
-  border: 0;
-  box-shadow: none;
-  /* A gentle perspective keeps the open door (past 90 degrees, left of the hinge) narrow
-     enough to fit in the page margin instead of covering the shelves. */
-  perspective: 1800px;
-  perspective-origin: 50% 50%;
-}
-
-.fridge-main::after { display: none; }
-
-.fridge-inside {
-  position: relative;
-  min-height: 320px;
-  padding: 22px 18px 24px;
-  border: 1px solid var(--border);
-  border-radius: 6px 6px 20px 20px;
-  background: var(--fridge-inside);
-  box-shadow: inset 0 0 0 6px rgba(255, 255, 255, 0.35), inset 0 10px 30px rgba(19, 45, 80, 0.12);
-  overflow: hidden;
-}
-
-/* The little light that comes on when the door opens (and leaks out when it's peeked). */
-.fridge-inside::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background: radial-gradient(circle at 50% 0%, var(--fridge-light), transparent 65%);
-  opacity: 0;
-  transition: opacity 0.3s ease 0.1s;
-  pointer-events: none;
-}
-
-.fridge-main.is-open .fridge-inside::before { opacity: 1; }
-.fridge-main.is-peek .fridge-inside::before,
-.fridge-main:not(.is-open):has(.fridge-door-panel:hover) .fridge-inside::before { opacity: 0.6; }
-
-.fridge-inside-head {
-  position: relative;
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  margin-bottom: 10px;
-}
-
-.fridge-close {
-  padding: 0;
-  border: 0;
-  background: none;
-  color: var(--accent);
-  font: inherit;
-  font-size: 0.6875rem;
-  font-weight: 800;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  cursor: pointer;
-}
-
-.fridge-close:hover { text-decoration: underline; }
-
-.fridge-inside-title {
-  position: relative;
-  margin: 0;
-  color: var(--text-muted);
-  font-size: 0.6875rem;
-  font-weight: 800;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-}
-
-/* Glass shelves: each title sits on one. */
-.fridge-shelves { position: relative; margin: 0; padding: 0; list-style: none; }
-.fridge-shelves li { padding: 8px 0 10px; border-bottom: 3px solid rgba(140, 200, 255, 0.45); }
-
-.fridge-item {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  padding: 7px 10px;
-  border-left: 5px solid var(--kind-colour, var(--accent));
-  border-radius: 4px;
-  background: var(--surface);
-  box-shadow: 0 3px 8px rgba(19, 45, 80, 0.12);
-  color: var(--text);
-  text-decoration: none;
-}
-
-.fridge-item:hover { background: var(--surface-hover); }
-.fridge-item.kind-movie { --kind-colour: #16294a; }
-.fridge-item.kind-series { --kind-colour: #1f4f8f; }
-.fridge-item.kind-anime { --kind-colour: #3b3577; }
-.fridge-item.kind-game { --kind-colour: #17505a; }
-.fridge-item.kind-book { --kind-colour: #5a4632; }
-.fridge-item-title { font-size: 0.875rem; font-weight: 700; line-height: 1.25; }
-.fridge-item-meta { color: var(--text-muted); font-size: 0.75rem; }
-.fridge-empty { position: relative; color: var(--text-muted); font-size: 0.875rem; }
-
-/* The door: a 3D panel hinged on the left with a front and a back face. */
-.fridge-door-panel {
-  position: absolute;
-  inset: 0;
-  cursor: pointer;
-  transform-origin: left center;
-  transform-style: preserve-3d;
-  transition: transform 0.5s cubic-bezier(0.2, 0.8, 0.2, 1);
-}
-
-.fridge-main.no-motion .fridge-door-panel,
-.fridge-main.no-motion .fridge-inside::before { transition: none; }
-
-/* Peek: the door eases open a crack on hover, inviting a click. */
-.fridge-main.is-peek .fridge-door-panel,
-.fridge-main:not(.is-open) .fridge-door-panel:hover { transform: rotateY(-14deg); }
-
-/* Open: past 90 degrees, so you see the inner side of the door with its bins. */
-.fridge-main.is-open .fridge-door-panel { transform: rotateY(-102deg); }
-
-.door-face {
-  position: absolute;
-  inset: 0;
-  border: 1px solid var(--border);
-  border-radius: 6px 6px 20px 20px;
-  backface-visibility: hidden;
-  -webkit-backface-visibility: hidden;
-}
-
-/* The magnets are rotated, so the browser paints them on their own layer and they would
-   show (and stay clickable) through the open door. Hide the whole front face once the door
-   passes 90 degrees, and bring it back as soon as it swings shut again. */
-.door-front {
-  transition: visibility 0s linear 0.03s;
-}
-
-.fridge-main.is-open .door-front {
-  visibility: hidden;
-  transition-delay: 0.16s;
-}
-
-.fridge-main.no-motion .door-front {
-  transition: none;
-}
-
-.door-front {
-  padding: 26px 44px 30px 20px;
-  background: linear-gradient(170deg, var(--fridge-top), var(--fridge-bottom));
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.55), 6px 0 16px rgba(19, 45, 80, 0.12);
-}
-
-.door-front::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  border-radius: inherit;
-  background: linear-gradient(115deg, transparent 25%, var(--fridge-sheen) 35%, transparent 45%);
-  pointer-events: none;
-}
-
-/* "4 open inside ›" — tells you what's behind the door before you open it. */
-.door-hint {
-  position: absolute;
-  left: 20px;
-  bottom: 16px;
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  color: var(--accent);
-  font-size: 0.75rem;
-  font-weight: 800;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-}
-
-.fridge-door-panel:hover .door-hint svg { transform: translateX(3px); }
-.door-hint svg { transition: transform 0.2s ease; }
-
-/* Inner side of the door: a plastic liner with three bins holding bottles. */
-.door-back {
-  display: flex;
-  flex-direction: column;
-  justify-content: space-evenly;
-  padding: 18px 14px;
-  background: linear-gradient(180deg, var(--fridge-liner), var(--fridge-inside));
-  transform: rotateY(180deg);
-}
-
-.door-bin {
-  position: relative;
-  display: flex;
-  align-items: flex-end;
-  gap: 6px;
-  height: 58px;
-  padding: 0 10px;
-}
-
-/* The bin's clear front lip, in front of the bottles. */
-.door-bin::after {
-  content: "";
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  height: 22px;
-  border: 2px solid rgba(140, 200, 255, 0.7);
-  border-top-width: 3px;
-  border-radius: 0 0 8px 8px;
-  background: rgba(200, 228, 255, 0.45);
-}
-
-.bottle {
-  width: 16px;
-  height: 46px;
-  border-radius: 6px 6px 3px 3px;
-  box-shadow: inset -3px 0 0 rgba(0, 0, 0, 0.08);
-}
-
-.bottle.short { height: 34px; }
-.bottle.milk { background: #ffffff; border: 1px solid #d3e0ee; }
-.bottle.juice { background: #f2a83b; }
-.bottle.sauce { width: 12px; background: #d6453d; }
-.bottle.water { background: #a9d6f5; }
-
-.fridge-handle-button {
-  z-index: 1;
-  padding: 0;
-  border: 0;
-  cursor: pointer;
-}
-
-/* A bigger invisible target around the handle. */
-.fridge-handle-button::before { box-shadow: 0 0 0 14px transparent; }
-
-.fridge-handle-button:focus-visible {
-  outline: 3px solid var(--gold);
-  outline-offset: 3px;
-}
-
-@media (max-width: 900px) {
-  .fridge-inside { min-height: 190px; padding: 16px 16px 18px; }
-  .door-front { padding: 18px 44px 40px 18px; }
-  .fridge-shelves { display: flex; gap: 10px; overflow-x: auto; }
-  .fridge-shelves li { flex: 0 0 auto; border-bottom: 0; padding: 0; }
-  .door-back { flex-direction: row; align-items: center; }
-  .door-bin { flex: 1; }
-}

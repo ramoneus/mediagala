@@ -28,10 +28,22 @@ It's built with **FastAPI**, **SQLAlchemy 2.0**, **SQLite** and **Jinja2**. It r
   - Use the quick "✓ next episode" button on each card.
   - Follow your progress with a progress bar and an "Up next" episode.
   - After the final episode, the app asks you to rate the series and marks it as watched.
+- **Quick add:** the "+ Add title" button opens a search box.
+  - One click on "+ Watchlist" puts a result in the fridge with its details and cover.
+  - Results you already have say "In your fridge".
+  - "⋯" opens the full form already filled in, to set your status or rating first.
+  - The box stays open, so you can add several titles in a row. Afterwards they're highlighted, and a single addition can be undone.
+- **Find it online:** type a name in the add form and pick a result, and the form fills itself in: title, year, genre, description and image.
+  - **Series:** [TVmaze](https://www.tvmaze.com/). Also fills in the episodes of every season.
+  - **Anime:** [AniList](https://anilist.co/). Also fills in the episodes.
+  - **Movies:** [TMDB](https://www.themoviedb.org/) if you add a free API key (see [below](#optional-better-movie-search-with-tmdb)), otherwise [Wikipedia](https://en.wikipedia.org/).
+  - **Games:** [Wikipedia](https://en.wikipedia.org/), so console games are found too.
+  - **Books:** [Open Library](https://openlibrary.org/). Also fills in the author and page count.
+  - Every kind works without any API key, and the form still works by hand when you're offline.
 - **Search** by title or author (case-insensitive)
-- **Filter** by type, genre and watch status
+- **Filter** by type, genre and watch status. A filter applies as soon as you pick it.
 - **Sort** by title, release year or rating (ascending/descending), or by date added
-- **"The fridge":** the collection overview drawn as a fridge, with one magnet per status (finished, in progress, planned, dropped); each magnet filters the list
+- **"The fridge":** the collection overview drawn as a fridge, with one magnet per status (finished, in progress, planned, dropped); each magnet filters the list. Open the door to see what you're in the middle of (next episode, page or hours played), the last one you touched first
 - **Persistent storage** in a local SQLite database
 - **Server-side validation** with field-level error messages
 - **Responsive** layout for desktop, tablet and mobile
@@ -39,7 +51,10 @@ It's built with **FastAPI**, **SQLAlchemy 2.0**, **SQLite** and **Jinja2**. It r
   - The app follows your system setting by default.
   - The ☀️/🌙 button in the header switches theme, and the app remembers your choice.
   - There's no flash of the wrong theme while a page loads.
-- **Custom images:** upload your own JPG, PNG or WebP image for any title, then replace or remove it later
+- **Custom images:** upload your own JPG, PNG or WebP image for any title, then replace or remove it later. Images are shrunk automatically, so the collection stays small on disk.
+- **A shelf of covers:** the collection is a grid of portrait covers with the title and one line under each, the way film and game libraries look. Phones show three covers per row.
+  - A thin bar along the bottom of a cover shows how far you are in a series or a book.
+  - Each title's own page holds the description and the Edit and Delete buttons.
 - **Typeset covers:** titles without an image get a cover in their kind's colour with the title set on it, so no external images are needed
 
 ##  Tech Stack
@@ -64,10 +79,16 @@ mediagala/
 │   ├── schemas.py           # Pydantic validation for form input
 │   ├── crud.py              # Data access: queries, filtering, sorting, stats
 │   ├── posters.py           # Image upload validation and storage
+│   ├── lookup/              # Online search that fills in the form
+│   │   ├── __init__.py      # Which source serves which kind, safe image download
+│   │   ├── base.py          # Shared result type, HTTP calls, text clean-up
+│   │   └── tmdb.py, wikipedia.py, tvmaze.py, anilist.py, openlibrary.py
+│   ├── settings.py          # Reads optional API keys from .env
 │   ├── seed.py              # Optional sample data
 │   ├── templating.py        # Shared Jinja2 environment
 │   ├── routers/
-│   │   └── titles.py        # HTML routes (list, detail, create, edit, delete, episodes)
+│   │   ├── titles.py        # HTML routes (list, detail, create, edit, delete, episodes)
+│   │   └── lookup.py        # JSON endpoints for the online search
 │   ├── templates/           # Jinja2 templates
 │   │   ├── base.html
 │   │   ├── index.html
@@ -79,11 +100,15 @@ mediagala/
 │       ├── css/style.css
 │       ├── js/title-form.js # Adapts the form to the chosen kind
 │       └── favicon.svg
+├── tests/                   # pytest suite (runs on a temporary database)
 ├── docs/screenshots/        # README images
 ├── data/                    # SQLite database + uploaded images (created at runtime, git-ignored)
 ├── run.bat                  # Windows one-click launcher
 ├── run.py                   # Starts the server and opens the browser
 ├── requirements.txt
+├── requirements-dev.txt     # + pytest, for running the tests
+├── .env.example             # Optional settings (API keys); copy to .env
+├── pyproject.toml           # pytest settings
 └── README.md
 ```
 
@@ -146,6 +171,37 @@ python -m app.seed
 
 This adds example movies, series and games, but only if the database is empty.
 
+### Optional: better movie search with TMDB
+
+Movies are looked up on Wikipedia by default. [TMDB](https://www.themoviedb.org/) gives sharper posters and more accurate genres, and needs a free API key:
+
+1. Create a free account at [themoviedb.org](https://www.themoviedb.org/signup).
+2. Go to **Settings → API** and request a key for personal use.
+3. Copy `.env.example` to a new file called `.env`, in the same folder.
+4. Paste your **API Key** or **API Read Access Token** after `TMDB_API_KEY=`, then restart the app.
+
+The `.env` file is in `.gitignore`, so your key never ends up on GitHub.
+
+##  Tests
+
+The `tests/` folder holds a **pytest** suite of about 150 tests. It covers:
+
+- the validation rules for each kind
+- episode and reading progress
+- adding, editing and deleting through the real web forms
+- search, filters and sorting
+- image uploads
+- the fridge
+- the database migrations from older versions
+- the security checks: escaping, open redirects and file paths
+
+```bash
+pip install -r requirements-dev.txt
+python -m pytest
+```
+
+Every test gets a fresh database in a temporary folder (set through the `MEDIAGALA_DATA_DIR` environment variable), so running the tests never touches your own collection.
+
 ##  Validation & Safety
 
 - All form input is validated with **Pydantic** before it reaches the database. Validation covers required fields, length limits, year range (1888 to the current year + 5), known genres only, and ratings from 1 to 10.
@@ -164,9 +220,11 @@ This adds example movies, series and games, but only if the database is empty.
 - **Safe image uploads:**
   - The file type is detected from the file's actual bytes, not from its name or the browser's claim.
   - Only JPG, PNG and WebP are accepted. SVG is rejected because it can contain scripts.
-  - The size limit is 5 MB.
+  - Uploads can be up to 10 MB.
+  - Every image is shrunk to at most 800 px and re-saved as WebP, so it takes about 50–150 KB on disk. Re-saving also removes hidden metadata such as a photo's GPS location. The size and quality are two settings at the top of [`posters.py`](app/posters.py).
   - Files are stored under random names, so a user's file name never touches the file system.
   - When a title's image is replaced or the title is deleted, the old file is removed.
+- **Online images are only downloaded from known hosts.** The browser sends the picked image's address, but the server only fetches it from the sources' own image sites, over HTTPS. Every redirect is checked too, so a link can't lead the server elsewhere. The image then gets the same checks as an upload.
 - **No open redirects:** the "next episode" button only redirects back to paths inside the app.
 - Custom error pages for 404, 400 and 500 responses. Unexpected errors are logged and never shown to the user.
 
@@ -178,12 +236,25 @@ This adds example movies, series and games, but only if the database is empty.
 
 ## 🗺 Possible Improvements
 
-- Automated tests with `pytest` and FastAPI's `TestClient`
 - Pagination for large collections
-- Automatic poster lookup via a free API such as TMDB
+- An optional IGDB source for games (it needs a free Twitch developer key) for sharper covers and platforms
 - User accounts, so several people can keep their own lists
 - Database migrations with Alembic
 - CSRF protection if the app is ever deployed publicly
+
+## Data sources
+
+The online search uses these free services. Their data stays theirs, under their own terms.
+
+| Kind   | Source | Terms |
+|--------|--------|-------|
+| Series | [TVmaze API](https://www.tvmaze.com/api) | [CC BY-SA](https://creativecommons.org/licenses/by-sa/4.0/) |
+| Anime  | [AniList API](https://docs.anilist.co/) | [Terms of use](https://docs.anilist.co/guide/terms-of-use) |
+| Movies (with a key) | [TMDB API](https://developer.themoviedb.org/) | [API terms](https://www.themoviedb.org/api-terms-of-use). This product uses the TMDB API but is not endorsed or certified by TMDB. |
+| Movies and games | [Wikipedia REST API](https://en.wikipedia.org/api/rest_v1/) | Text [CC BY-SA](https://creativecommons.org/licenses/by-sa/4.0/). Posters and covers are non-free images, which Wikipedia keeps at low resolution. |
+| Books  | [Open Library API](https://openlibrary.org/developers/api) | Open data |
+
+MediaGala is a personal, non-commercial project.
 
 ## 📄 License
 

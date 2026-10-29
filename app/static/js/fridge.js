@@ -4,28 +4,25 @@
   const fridge = document.querySelector("[data-fridge]");
   if (!fridge) return;
 
-  const door = fridge.querySelector(".fridge-door-panel");
+  const door = fridge.querySelector(".fridge-door");
   const handle = fridge.querySelector(".fridge-handle-button");
   const inside = fridge.querySelector(".fridge-inside");
 
-  function setOpen(open, remember = true) {
-    fridge.classList.remove("is-peek");
+  function setOpen(open) {
     fridge.classList.toggle("is-open", open);
     handle.setAttribute("aria-expanded", String(open));
     handle.setAttribute("aria-label", open ? "Close the fridge" : "Open the fridge");
     // While the door is shut, keep the shelves out of keyboard and screen-reader reach.
-    inside.toggleAttribute("inert", !open);
-    if (remember) {
-      try {
-        localStorage.setItem("fridge-open", open ? "1" : "0");
-      } catch (e) {
-        // Storage can be blocked; the door still works for this page.
-      }
+    inside.inert = !open;
+    try {
+      localStorage.setItem("fridge-open", open ? "1" : "0");
+    } catch (e) {
+      // Storage can be blocked; the door still works on this page.
     }
   }
 
   door.addEventListener("click", (event) => {
-    if (event.target.closest(".magnet")) return; // magnets filter the list instead
+    if (event.target.closest(".magnet")) return;
     setOpen(!fridge.classList.contains("is-open"));
   });
 
@@ -35,13 +32,21 @@
     handle.focus();
   });
 
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape" && fridge.classList.contains("is-open")) {
+      setOpen(false);
+      handle.focus();
+    }
+  });
+
   // Restore the last state without playing the swing animation on page load.
   let saved = null;
   try {
     saved = localStorage.getItem("fridge-open");
   } catch (e) {}
-  const startOpen = fridge.classList.contains("is-open") || saved === "1";
-  fridge.classList.add("no-motion");
-  setOpen(startOpen, false);
-  requestAnimationFrame(() => requestAnimationFrame(() => fridge.classList.remove("no-motion")));
+  if (saved === "1") {
+    fridge.classList.add("no-motion");
+    setOpen(true);
+    requestAnimationFrame(() => requestAnimationFrame(() => fridge.classList.remove("no-motion")));
+  }
 })();

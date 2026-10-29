@@ -18,7 +18,10 @@
   {%- if (kinds and current_kind.value not in kinds.split()) or (statuses and current_status not in statuses.split()) %} hidden{% endif %}
 {%- endmacro %}
 
-{% block scripts %}<script src="{{ static_url('js/title-form.js') }}" defer></script>{% endblock %}
+{% block scripts %}
+<script src="{{ static_url('js/title-form.js') }}" defer></script>
+<script src="{{ static_url('js/lookup.js') }}" defer></script>
+{% endblock %}
 
 {% block content %}
 <div class="form-page">
@@ -50,6 +53,18 @@
       </div>
       {{ field_error('kind') }}
     </fieldset>
+
+    {# Search a free online database and fill in the form from the result (lookup.js). #}
+    {% set sources = lookup_sources() %}
+    <div class="form-field form-field-wide lookup" data-lookup data-sources="{{ sources|tojson|forceescape }}"
+         {{ show_when(kinds=sources.keys()|join(' ')) }}>
+      <label for="lookup-query">Find it online <span class="optional">(fills in the form for you)</span></label>
+      <input type="search" id="lookup-query" placeholder="Search by name…" autocomplete="off"
+             aria-controls="lookup-results" aria-describedby="lookup-status">
+      <ul class="lookup-results" id="lookup-results" hidden></ul>
+      <p class="field-hint" id="lookup-status" aria-live="polite"></p>
+      <p class="lookup-notice" data-lookup-notice></p>
+    </div>
 
     <div class="form-field form-field-wide">
       <label for="title">Title</label>
@@ -186,9 +201,16 @@
           </label>
         </div>
       {% endif %}
+      {# A cover picked in "Find it online"; the server downloads it on save unless a file is chosen. #}
+      <input type="hidden" name="poster_url" value="{{ form.get('poster_url') or '' }}">
+      <div class="online-poster" {% if not form.get('poster_url') %}hidden{% endif %}>
+        <img src="{{ form.get('poster_url') or '' }}" alt="">
+        <span>Image from the online search</span>
+        <button type="button" class="btn btn-ghost" data-drop-online-poster>Don't use it</button>
+      </div>
       <input type="file" id="poster" name="poster" accept="{{ accepted_types }}" {{ invalid('poster') }}>
       <p class="field-hint">
-        JPG, PNG or WebP, up to 5 MB.{% if item and item.poster_filename %} A new file replaces the current image.{% endif %}
+        JPG, PNG or WebP, up to 10 MB. It's shrunk automatically, so it takes little space.{% if item and item.poster_filename %} A new file replaces the current image.{% endif %}
         {% if errors and not errors.get('poster') %}<br><strong>If you had picked an image, please choose it again — files aren't kept after an error.</strong>{% endif %}
       </p>
       {{ field_error('poster') }}

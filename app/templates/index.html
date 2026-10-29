@@ -1,14 +1,29 @@
 {% extends "base.html" %}
 
-{% block scripts %}<script src="{{ static_url('js/fridge.js') }}" defer></script>{% endblock %}
+{% block scripts %}
+<script src="{{ static_url('js/fridge.js') }}" defer></script>
+<script src="{{ static_url('js/filters.js') }}" defer></script>
+{% endblock %}
 
 {% block content %}
-{% if flash %}
+{% if added_titles|length == 1 %}
+  {% set new = added_titles[0] %}
+  <div class="flash" role="status">
+    ✓ Added <strong>{{ new.title }}</strong> to the fridge ({{ new.status_label }}) ·
+    <a href="/titles/{{ new.id }}/edit">Edit</a> ·
+    <form method="post" action="/titles/{{ new.id }}/delete" class="inline-form">
+      <button type="submit" class="link-button">Undo</button>
+    </form>
+  </div>
+{% elif added_titles %}
+  <div class="flash" role="status">✓ Added {{ added_titles|length }} titles to the fridge.</div>
+{% elif flash %}
   <div class="flash" role="status">{{ flash }}</div>
 {% endif %}
 
 <div class="home">
-  {# A tall top-freezer fridge standing beside the collection (sticky while the list scrolls). #}
+  {# A tall top-freezer fridge standing beside the collection (sticky while the list scrolls).
+     The magnets on the door filter the list; opening the door shows what you have "open". #}
   <aside class="fridge" aria-label="Collection overview">
     <div class="fridge-freezer">
       <h1 class="shelf-title">The fridge</h1>
@@ -20,10 +35,10 @@
       </span>
       <span class="fridge-handle" aria-hidden="true"></span>
     </div>
-    {% set fridge_state = request.query_params.get('fridge', '') %}
-    <div class="fridge-main{% if fridge_state == 'open' %} is-open{% elif fridge_state == 'peek' %} is-peek{% endif %}" data-fridge>
-      {# Inside the fridge: whatever you have "open" right now (titles in progress). #}
-      <div class="fridge-inside" id="fridge-inside">
+
+    <div class="fridge-main" data-fridge>
+      {# Inside: the titles in progress, the one you touched last first. Inert until the door opens. #}
+      <div class="fridge-inside" id="fridge-inside" inert>
         <div class="fridge-inside-head">
           <p class="fridge-inside-title">Open now</p>
           <button type="button" class="fridge-close">Close</button>
@@ -44,14 +59,17 @@
               </li>
             {% endfor %}
           </ul>
+          {% if stats.in_progress > open_titles|length %}
+            <a class="fridge-more" href="/?status=watching">All {{ stats.in_progress }} in progress →</a>
+          {% endif %}
         {% else %}
           <p class="fridge-empty">Nothing open. Grab something from the planned shelf.</p>
         {% endif %}
       </div>
 
-      {# The door has two faces: the enamel front with the magnets, and the inner side with door bins. #}
-      <div class="fridge-door-panel">
-        <div class="door-face door-front">
+      {# The door: enamel front with the magnets, and an inner side with door bins. #}
+      <div class="fridge-door">
+        <div class="door-front">
           {% if stats.total %}
             {% set segments = [
               ("finished", "finished", stats.finished, "watched"),
@@ -60,13 +78,15 @@
               ("dropped", "dropped", stats.dropped, "dropped"),
             ] %}
             {% set tilts = [-4, 3, -2, 4] %}
+            {# Magnets count the whole fridge, so they filter the whole fridge (all kinds). #}
             <ul class="magnets">
               {% for key, label, count, status_value in segments if count or key != "dropped" %}
                 {% set active = filters.status == status_value and not filters.kind %}
                 <li>
                   <a class="magnet seg-{{ key }}{% if active %} is-active{% endif %}"
                      href="{{ '/' if active else '/?status=' ~ status_value }}"
-                     style="--tilt: {{ tilts[loop.index0 % 4] }}deg">
+                     style="--tilt: {{ tilts[loop.index0 % 4] }}deg"
+                     {% if active %}aria-current="true" title="Show everything"{% else %}title="Show {{ label }} titles"{% endif %}>
                     <strong>{{ count }}</strong> {{ label }}
                   </a>
                 </li>
@@ -80,8 +100,7 @@
           <button type="button" class="fridge-handle fridge-handle-button"
                   aria-controls="fridge-inside" aria-expanded="false" aria-label="Open the fridge"></button>
         </div>
-        <div class="door-face door-back" aria-hidden="true">
-          {# Door bins with a few bottles, seen when the door is open. #}
+        <div class="door-back" aria-hidden="true">
           <div class="door-bin"><span class="bottle milk"></span><span class="bottle juice"></span><span class="bottle milk short"></span></div>
           <div class="door-bin"><span class="bottle sauce"></span><span class="bottle sauce short"></span></div>
           <div class="door-bin"><span class="bottle water"></span><span class="bottle milk"></span></div>
@@ -100,7 +119,8 @@
   {% endfor %}
 </nav>
 
-<form class="toolbar" method="get" action="/" role="search">
+{% set can_reset = filters.active or filters.sort != "newest" %}
+<form class="toolbar{% if not can_reset %} toolbar-no-reset{% endif %}" method="get" action="/" role="search">
   <input type="hidden" name="kind" value="{{ filters.kind }}">
   <div class="toolbar-search">
     <label for="q" class="sr-only">Search by title or author</label>
@@ -124,15 +144,16 @@
   </select>
 
   <label class="sr-only" for="sort">Sort by</label>
-  <select id="sort" name="sort">
+  <select id="sort" name="sort" class="toolbar-sort">
     {% for key, label in sort_options.items() %}
       <option value="{{ key }}" {% if key == filters.sort %}selected{% endif %}>{{ label }}</option>
     {% endfor %}
   </select>
 
   <div class="toolbar-actions">
-    <button type="submit" class="btn">Apply</button>
-    {% if filters.active or filters.sort != "newest" %}
+    {# Hidden by filters.js, which applies a filter as soon as it changes. #}
+    <button type="submit" class="btn toolbar-apply">Apply</button>
+    {% if can_reset %}
       <a href="{{ reset_url }}" class="btn btn-ghost">Reset</a>
     {% endif %}
   </div>

@@ -6,6 +6,7 @@ Every state-changing action is a POST that ends in a 303 redirect
 """
 
 import enum
+import io
 from dataclasses import dataclass
 from typing import Annotated, Any
 from urllib.parse import urlencode
@@ -16,7 +17,7 @@ from pydantic import ValidationError
 from sqlalchemy.orm import Session
 from starlette.datastructures import UploadFile
 
-from app import crud, posters
+from app import crud, lookup, posters
 from app.catalog import (
     ALL_GENRES,
     EPISODIC_KINDS,
@@ -35,6 +36,8 @@ from app.templating import templates
 router = APIRouter()
 
 DbSession = Annotated[Session, Depends(get_db)]
+
+MAX_ADDED = 50  # titles the quick add can report in one go
 
 # Flash messages are chosen by key from this dict, so the query string can't inject text.
 FLASH_MESSAGES = {
@@ -65,6 +68,7 @@ TitleFormData = Annotated[dict[str, Any], Depends(read_title_form)]
 class PosterInput:
     upload: UploadFile | None  # None when no file was chosen
     remove: bool  # "Remove current image" checkbox on the edit form
+    url: str  # cover picked in "Find it online" ("" if none); used when no file was chosen
 
 
 async def read_poster_input(request: Request) -> PosterInput:
@@ -72,7 +76,11 @@ async def read_poster_input(request: Request) -> PosterInput:
     upload = form.get("poster")
     # Browsers send an empty, nameless file part when nothing was selected.
     has_file = isinstance(upload, UploadFile) and bool(upload.filename)
-    return PosterInput(upload=upload if has_file else None, remove=form.get("remove_poster") == "1")
+    return PosterInput(
+        upload=upload if has_file else None,
+        remove=form.get("remove_poster") == "1",
+        url=str(form.get("poster_url", "")).strip(),
+    )
 
 
 PosterFormData = Annotated[PosterInput, Depends(read_poster_input)]
@@ -171,11 +179,13 @@ def validate_submission(
         data = TitleIn.model_validate(raw)
     except ValidationError as exc:
         errors.update(form_errors(exc))
-    if poster.upload is not None:
-        try:
+    try:
+        if poster.upload is not None:
             image = posters.read_poster(poster.upload.file)
-        except posters.PosterError as exc:
-            errors["poster"] = str(exc)
+        elif poster.url:
+            image = posters.read_poster(io.BytesIO(lookup.fetch_image(poster.url)))
+    except (posters.PosterError, lookup.LookupFailed) as exc:
+        errors["poster"] = str(exc)
     return data, image, errors
 
 
@@ -232,6 +242,7 @@ def index(
     kind: str = "",
     sort: str = crud.DEFAULT_SORT,
     msg: str = "",
+    added: str = "",
 ) -> HTMLResponse:
     # Unknown filter values are ignored instead of producing an error page.
     q = q.strip()[:200]
@@ -258,7 +269,7 @@ def index(
     }
     stats = crud.get_stats(db)
     # Titles you have "open" (in progress), shown on the shelves inside the fridge.
-    open_titles = crud.list_titles(db, status=Status.IN_PROGRESS)[:6]
+    open_titles = crud.list_open_titles(db, limit=5)
     tab_specs = [("All", "", stats.total)] + [(k.config.plural, k.value, stats.by_kind[k]) for k in Kind]
     kind_tabs = [
         {
@@ -271,6 +282,10 @@ def index(
     ]
 
     titles = crud.list_titles(db, query=q, genre=genre or None, status=watch_status, kind=title_kind, sort=sort)
+    # Titles the quick add just put in the fridge (?added=3,7): named in a message and highlighted.
+    # Only ids are read from the URL; the names shown come from the database.
+    added_ids = [int(part) for part in added.split(",")[:MAX_ADDED] if part.isdigit()]
+    added_titles = crud.get_titles(db, added_ids) if added_ids else []
     return templates.TemplateResponse(
         request,
         "index.html",
@@ -286,6 +301,8 @@ def index(
             "current_url": index_url(**params),
             "reset_url": index_url(kind=params["kind"]),
             "flash": FLASH_MESSAGES.get(msg),
+            "added_titles": added_titles,
+            "added_ids": {item.id for item in added_titles},
         },
     )
 
@@ -300,7 +317,8 @@ def new_title(request: Request, kind: str = "") -> HTMLResponse:
 def create_title(request: Request, db: DbSession, raw: TitleFormData, poster: PosterFormData) -> Response:
     data, image, errors = validate_submission(raw, poster)
     if errors or data is None:
-        return render_form(request, form=raw, errors=errors, status_code=status.HTTP_422_UNPROCESSABLE_CONTENT)
+        form = {**raw, "poster_url": poster.url}
+        return render_form(request, form=form, errors=errors, status_code=status.HTTP_422_UNPROCESSABLE_CONTENT)
 
     filename = posters.save_poster(*image) if image else None
     try:
@@ -331,8 +349,9 @@ def update_title(
 ) -> Response:
     data, image, errors = validate_submission(raw, poster)
     if errors or data is None:
+        form = {**raw, "poster_url": poster.url}
         return render_form(
-            request, form=raw, errors=errors, item=item, status_code=status.HTTP_422_UNPROCESSABLE_CONTENT
+            request, form=form, errors=errors, item=item, status_code=status.HTTP_422_UNPROCESSABLE_CONTENT
         )
 
     old_filename = item.poster_filename

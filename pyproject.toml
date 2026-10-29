@@ -1,0 +1,5 @@
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+# Starlette nudges towards its httpx fork; the regular httpx still works fine for the test client.
+filterwarnings = ["ignore:Using `httpx` with `starlette.testclient`"]

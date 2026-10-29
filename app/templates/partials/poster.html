@@ -10,8 +10,15 @@
   {% endif %}
   <span class="badge badge-{{ item.status.value }}">{{ item.status_label }}</span>
   {% if item.rating %}
-    <span class="rating" title="Your rating">
-      <span aria-hidden="true">★</span> {{ item.rating }}<small>/10</small>
+    <span class="rating" title="Your rating: {{ item.rating }}/10">
+      <span aria-hidden="true">★</span> {{ item.rating }}<span class="sr-only"> out of 10</span>
+    </span>
+  {% endif %}
+  {# Set by the title card for things in progress. #}
+  {% if progress_percent is defined and progress_percent is not none %}
+    <span class="poster-progress" role="progressbar" aria-label="{{ progress_label }}"
+          aria-valuenow="{{ progress_percent }}" aria-valuemin="0" aria-valuemax="100">
+      <span style="width: {{ progress_percent }}%"></span>
     </span>
   {% endif %}
 </div>

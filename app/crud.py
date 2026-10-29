@@ -64,8 +64,37 @@ def list_titles(
     return list(db.scalars(stmt.order_by(*order_by)))
 
 
+def list_open_titles(db: Session, limit: int) -> list[Title]:
+    """Titles in progress, the one you touched last first (for the shelves inside the fridge)."""
+    stmt = select(Title).where(Title.status == Status.IN_PROGRESS)
+    return list(db.scalars(stmt.order_by(Title.updated_at.desc(), Title.id.desc()).limit(limit)))
+
+
 def get_title(db: Session, title_id: int) -> Title | None:
     return db.get(Title, title_id)
+
+
+def get_titles(db: Session, title_ids: list[int]) -> list[Title]:
+    return list(db.scalars(select(Title).where(Title.id.in_(title_ids)).order_by(Title.id)))
+
+
+def _same_title(title: str) -> str:
+    """Compare titles loosely: case, curly apostrophes and extra spaces don't matter."""
+    return " ".join(title.replace("’", "'").casefold().split())
+
+
+def find_in_collection(db: Session, kind: Kind, candidates: list[tuple[str, int | None]]) -> list[int | None]:
+    """For each (title, year), the id of the same title of this kind if it's already in the collection.
+
+    A year of None (unknown) matches the title in any year.
+    """
+    years_by_title: dict[str, list[tuple[int, int]]] = {}
+    for title_id, title, year in db.execute(select(Title.id, Title.title, Title.year).where(Title.kind == kind)):
+        years_by_title.setdefault(_same_title(title), []).append((year, title_id))
+    return [
+        next((title_id for y, title_id in years_by_title.get(_same_title(title), []) if year in (None, y)), None)
+        for title, year in candidates
+    ]
 
 
 def _sync_seasons(item: Title, episode_counts: list[int]) -> None:

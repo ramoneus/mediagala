@@ -1,5 +1,6 @@
 """Database engine, session factory and the declarative base."""
 
+import os
 from collections.abc import Iterator
 from pathlib import Path
 
@@ -7,8 +8,9 @@ from sqlalchemy import create_engine, event, inspect, text
 from sqlalchemy.orm import DeclarativeBase, Session, sessionmaker
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
-DATA_DIR = PROJECT_ROOT / "data"
-DATA_DIR.mkdir(exist_ok=True)
+# MEDIAGALA_DATA_DIR moves the database and uploaded images elsewhere (the tests use a temporary folder).
+DATA_DIR = Path(os.environ.get("MEDIAGALA_DATA_DIR") or PROJECT_ROOT / "data")
+DATA_DIR.mkdir(parents=True, exist_ok=True)
 
 DATABASE_URL = f"sqlite:///{DATA_DIR / 'movies.db'}"
 
