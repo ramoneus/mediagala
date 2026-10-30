@@ -62,6 +62,15 @@ NEW_COLUMNS = {
     "author": "VARCHAR(200) NOT NULL DEFAULT ''",
     "pages": "INTEGER",
     "current_page": "INTEGER",
+    "platform": "VARCHAR(50) NOT NULL DEFAULT ''",
+    "started_on": "DATE",
+    "finished_on": "DATE",
+    "notes": "TEXT NOT NULL DEFAULT ''",
+    "source": "VARCHAR(30) NOT NULL DEFAULT ''",
+    "source_id": "VARCHAR(100) NOT NULL DEFAULT ''",
+    "facts": "JSON NOT NULL DEFAULT '[]'",
+    "source_url": "VARCHAR(300) NOT NULL DEFAULT ''",
+    "trailer_url": "VARCHAR(300) NOT NULL DEFAULT ''",
 }
 
 

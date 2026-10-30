@@ -41,16 +41,33 @@
       const statusOk = !el.dataset.statuses || el.dataset.statuses.split(" ").includes(status);
       el.hidden = !(kindOk && statusOk);
     });
+    // "Watched on", "Completed on", "Dropped on"…
+    const ended = status === "dropped" ? status : "watched";
+    form.querySelector("[data-finished-label]").textContent = `${labels[ended] || "Finished"} on`;
 
     if (kindChanged) {
       updateGenres(kind);
       form.querySelector("[data-year-label]").textContent = config[kind].year_label;
+      form.querySelector("[data-platform-label]").textContent = config[kind].platform_label;
+      form.querySelector("#platform-options").replaceChildren(...config[kind].platforms.map((p) => new Option(p)));
     }
+  }
+
+  // Editing a title and moving it on (started it, finished it): the date is today unless you change it.
+  // New titles are often things from the past, so their dates are left for you to fill in.
+  function suggestToday(status) {
+    if (!("editing" in form.dataset)) return;
+    const field = { watching: "#started_on", watched: "#finished_on", dropped: "#finished_on" }[status];
+    const input = field && form.querySelector(field);
+    if (input && !input.value) input.value = form.dataset.today;
   }
 
   form.addEventListener("change", (event) => {
     if (event.target.name === "kind") update(true);
-    else if (event.target.name === "status") update(false);
+    else if (event.target.name === "status") {
+      update(false);
+      suggestToday(event.target.value);
+    }
   });
 
   // One "episodes" input per season, so seasons can have different lengths.

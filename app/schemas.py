@@ -13,6 +13,10 @@ MAX_SEASONS = 50
 MAX_EPISODES_PER_SEASON = 500
 MAX_HOURS_PLAYED = 100_000
 MAX_PAGES = 100_000
+MAX_NOTES = 5000
+# Statuses that come with a start date and a finish date (a dropped title stopped on a day too).
+STARTED = (Status.IN_PROGRESS, Status.FINISHED, Status.DROPPED)
+ENDED = (Status.FINISHED, Status.DROPPED)
 
 
 class TitleIn(BaseModel):
@@ -45,6 +49,11 @@ class TitleIn(BaseModel):
     author: str = Field(default="", max_length=200)
     pages: int | None = Field(default=None, ge=1, le=MAX_PAGES)
     current_page: int | None = Field(default=None, ge=0, le=MAX_PAGES)
+    # Every kind.
+    platform: str = Field(default="", max_length=50)
+    started_on: date | None = None
+    finished_on: date | None = None
+    notes: str = Field(default="", max_length=MAX_NOTES)
 
     @field_validator("genre")
     @classmethod
@@ -64,6 +73,7 @@ class TitleIn(BaseModel):
 
     @field_validator(
         "rating", "progress_season", "progress_episode", "completion", "hours_played", "pages", "current_page",
+        "started_on", "finished_on",
         mode="before",
     )
     @classmethod
@@ -199,12 +209,39 @@ class TitleIn(BaseModel):
             raise ValueError(f"The book only has {pages} pages.")
         return value
 
+    @staticmethod
+    def _not_in_future(value: date | None) -> date | None:
+        if value is not None and value > date.today():
+            raise ValueError("That date is in the future.")
+        return value
+
+    @field_validator("started_on")
+    @classmethod
+    def started_once_begun(cls, value: date | None, info: ValidationInfo) -> date | None:
+        kind, status = info.data.get("kind"), info.data.get("status")
+        # Movies are watched in one go: they only have the day you watched them.
+        if status not in STARTED or (kind and Status.IN_PROGRESS not in kind.config.statuses):
+            return None
+        return cls._not_in_future(value)
+
+    @field_validator("finished_on")
+    @classmethod
+    def finished_once_ended(cls, value: date | None, info: ValidationInfo) -> date | None:
+        if info.data.get("status") not in ENDED:
+            return None
+        started = info.data.get("started_on")
+        if value is not None and started is not None and value < started:
+            raise ValueError("That's before the day you started.")
+        return cls._not_in_future(value)
+
 
 FRIENDLY_MESSAGES = {
     "missing": "This field is required.",
     "string_too_short": "This field is required.",
     "int_parsing": "Please enter a whole number.",
     "enum": "Please choose a valid option.",
+    "date_parsing": "Please enter a valid date.",
+    "date_from_datetime_parsing": "Please enter a valid date.",
 }
 
 

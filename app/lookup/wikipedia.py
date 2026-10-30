@@ -110,6 +110,70 @@ GAME_GENRES = [
 ]
 
 
+# --- Credits read from the article's opening sentences -------------------------
+
+# Lower-case words that can sit inside a name: "Guillermo del Toro", "Joel and Ethan Coen".
+NAME_JOINERS = {"de", "del", "der", "van", "von", "da", "di", "du", "le", "la", "and", "&"}
+# Where the names after "directed by" end: punctuation (not the dot of an initial, as in "D. B. Weiss"),
+# or a small word that starts the next part of the sentence ("and written by", "with", "who").
+CREDIT_END = r"(?=,|;|:|\(|(?<!\b[A-Z])\.|\s(?:and|with|who|from|for|in|on|as|based|under|at|after)\s(?![A-Z])|$)"
+NICKNAME = re.compile(r"\s[\"“][^\"”]*[\"”]")  # Eric "ConcernedApe" Barone
+
+
+def _is_name_word(word: str) -> bool:
+    return word[0].isupper() or word[0].isdigit() or word in NAME_JOINERS
+
+
+def _trailing_name(text: str) -> str:
+    """The names at the end of a phrase: "the Swedish company Mojang Studios" -> "Mojang Studios"."""
+    words = text.split()
+    start = len(words)
+    while start and _is_name_word(words[start - 1]):
+        start -= 1
+    while start < len(words) and words[start] in NAME_JOINERS:  # never start with "and"
+        start += 1
+    name = " ".join(words[start:])
+    return name if len(name) <= 80 else ""
+
+
+def credit(text: str, verb: str) -> str:
+    """Who did it, from a sentence: credit("…film directed by Denis Villeneuve and written by…", "directed")."""
+    # Other jobs may come between the verb and "by": "directed, produced, and edited by Joel and Ethan Coen".
+    other_jobs = r"(?:,? (?:and )?[a-z-]+)*"
+    found = re.search(rf"\b{verb}{other_jobs} by (.+?){CREDIT_END}", NICKNAME.sub("", text))
+    return _trailing_name(found.group(1)) if found else ""
+
+
+def stars(text: str) -> str:
+    """ "The film stars Amy Adams as Louise Banks, a linguist…" -> "Amy Adams" (the first few names)."""
+    found = re.search(rf"\b(?:(?:film|It|movie) stars|Starring) (.+?)(?:(?<!\b[A-Z])\.|$)", text)
+    if not found:
+        return ""
+    people = []
+    for part in re.split(r",\s*(?:and\s+)?|\s+and\s+", found.group(1)):
+        person = part.split(" as ")[0].strip()
+        if not person or not all(_is_name_word(word) for word in person.split()):
+            break  # the list of names is over ("a linguist engaged by…")
+        people.append(person)
+    return base.names(people)
+
+
+def movie_facts(text: str) -> tuple[tuple[str, str], ...]:
+    return base.facts(("Director", credit(text, "directed")), ("Starring", stars(text)))
+
+
+def game_facts(text: str) -> tuple[tuple[str, str], ...]:
+    both = credit(text, "developed and published")
+    if both:
+        return base.facts(("Developer & publisher", both), ("Director", credit(text, "directed")))
+    return base.facts(
+        # "…a role-playing video game by Larian Studios" names only the studio.
+        ("Developer", credit(text, "[Dd]eveloped") or credit(text, "game")),
+        ("Publisher", credit(text, "published")),
+        ("Director", credit(text, "directed")),
+    )
+
+
 # --- Search and details, shared by both ----------------------------------------
 
 
@@ -118,7 +182,10 @@ def _https(url: str | None) -> str:
 
 
 def _make_source(
-    noun: str, unwanted: Callable[[str], bool], genre_of: Callable[[str], str]
+    noun: str,
+    unwanted: Callable[[str], bool],
+    genre_of: Callable[[str], str],
+    facts_of: Callable[[str], tuple[tuple[str, str], ...]],
 ) -> tuple[Callable[[str], tuple[Match, ...]], Callable[[str], Match | None]]:
     """Build the search and details functions for one kind of page ("film" or "game")."""
 
@@ -170,14 +237,20 @@ def _make_source(
             description=base.plain_text(extract),
             image_url=image,
             thumb_url=image,
+            # The credits are in the opening sentences ("Developed by …, it was released…").
+            facts=facts_of(extract[:800]),
+            page_url=f"https://en.wikipedia.org/wiki/{quote(page_key)}",
         )
 
     return search, details
 
 
 search_movies, movie_details = _make_source(
-    "film", lambda text: bool(NOT_A_MOVIE.search(text)), lambda text: base.genre_from_words(text, MOVIE_GENRES)
+    "film",
+    lambda text: bool(NOT_A_MOVIE.search(text)),
+    lambda text: base.genre_from_words(text, MOVIE_GENRES),
+    movie_facts,
 )
 search_games, game_details = _make_source(
-    "game", _not_a_game, lambda text: base.genre_by_priority(text, GAME_GENRES)
+    "game", _not_a_game, lambda text: base.genre_by_priority(text, GAME_GENRES), game_facts
 )

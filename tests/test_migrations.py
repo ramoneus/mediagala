@@ -31,6 +31,8 @@ def test_movies_table_from_the_first_version_is_upgraded(db):
     assert "titles" in tables and "movies" not in tables and "seasons" in tables
     movie = db.query(Title).one()
     assert (movie.title, movie.kind, movie.status, movie.rating, movie.author) == ("Alien", Kind.MOVIE, Status.FINISHED, 9, "")
+    # Columns added later start empty.
+    assert (movie.notes, movie.platform, movie.started_on, movie.facts, movie.source) == ("", "", None, [], "")
 
 
 def test_starting_twice_changes_nothing():

@@ -1,13 +1,18 @@
 """Data-access functions. Routes call these instead of building queries themselves."""
 
 from dataclasses import dataclass
+from datetime import date
 
 from sqlalchemy import func, or_, select
 from sqlalchemy.orm import Session
 
 from app.catalog import Kind, Status
+from app.lookup import Match
 from app.models import Episode, Season, Title
 from app.schemas import TitleIn
+
+# A title picked in an online search: the source's name ("TMDB") and its details.
+OnlinePick = tuple[str, Match]
 
 # Whitelisted sort options: user input only ever selects a key, never raw SQL.
 SORT_OPTIONS = {
@@ -78,7 +83,7 @@ def get_titles(db: Session, title_ids: list[int]) -> list[Title]:
     return list(db.scalars(select(Title).where(Title.id.in_(title_ids)).order_by(Title.id)))
 
 
-def _same_title(title: str) -> str:
+def same_title(title: str) -> str:
     """Compare titles loosely: case, curly apostrophes and extra spaces don't matter."""
     return " ".join(title.replace("’", "'").casefold().split())
 
@@ -90,11 +95,21 @@ def find_in_collection(db: Session, kind: Kind, candidates: list[tuple[str, int 
     """
     years_by_title: dict[str, list[tuple[int, int]]] = {}
     for title_id, title, year in db.execute(select(Title.id, Title.title, Title.year).where(Title.kind == kind)):
-        years_by_title.setdefault(_same_title(title), []).append((year, title_id))
+        years_by_title.setdefault(same_title(title), []).append((year, title_id))
     return [
-        next((title_id for y, title_id in years_by_title.get(_same_title(title), []) if year in (None, y)), None)
+        next((title_id for y, title_id in years_by_title.get(same_title(title), []) if year in (None, y)), None)
         for title, year in candidates
     ]
+
+
+def _set_online(item: Title, online: OnlinePick | None) -> None:
+    """Remember where the title was found and what that source says about it."""
+    if online is None:
+        return
+    source, match = online
+    item.source, item.source_id = source, match.source_id
+    item.facts = [list(fact) for fact in match.facts]
+    item.source_url, item.trailer_url = match.page_url, match.trailer_url
 
 
 def _sync_seasons(item: Title, episode_counts: list[int]) -> None:
@@ -111,38 +126,61 @@ def _sync_seasons(item: Title, episode_counts: list[int]) -> None:
     del item.seasons[len(episode_counts):]
 
 
-def create_title(db: Session, data: TitleIn, poster_filename: str | None = None) -> Title:
+def create_title(
+    db: Session, data: TitleIn, poster_filename: str | None = None, online: OnlinePick | None = None
+) -> Title:
     item = Title(**data.model_dump(exclude={"seasons"}), poster_filename=poster_filename)
     _sync_seasons(item, data.seasons)
+    _set_online(item, online)
     db.add(item)
     db.commit()
     db.refresh(item)
     return item
 
 
-def update_title(db: Session, item: Title, data: TitleIn, *, poster_filename: str | None) -> Title:
+def update_title(
+    db: Session, item: Title, data: TitleIn, *, poster_filename: str | None, online: OnlinePick | None = None
+) -> Title:
     # poster_filename is required so a caller can't wipe the image by forgetting it.
     for field, value in data.model_dump(exclude={"seasons"}).items():
         setattr(item, field, value)
     _sync_seasons(item, data.seasons)
     item.poster_filename = poster_filename
+    _set_online(item, online)
     db.commit()
     db.refresh(item)
     return item
+
+
+def save_online_details(db: Session, item: Title, online: OnlinePick, poster_filename: str | None = None) -> None:
+    """Fill in the details from an online source; the description and image only if there were none."""
+    _set_online(item, online)
+    if not item.description:
+        item.description = online[1].description
+    if poster_filename:
+        item.poster_filename = poster_filename
+    db.commit()
+
+
+def _begin(item: Title) -> None:
+    """Starting something planned: it's in progress from today."""
+    if item.status == Status.PLANNED and item.started_on is None:
+        item.started_on = date.today()
+    item.status = Status.IN_PROGRESS
 
 
 def set_progress(db: Session, item: Title, position: Episode | None) -> None:
     """Set the last watched episode (None = start over). Ticking off an episode means you're watching."""
     item.progress_season, item.progress_episode = position if position else (None, None)
     if position is not None:
-        item.status = Status.IN_PROGRESS
+        _begin(item)
     db.commit()
 
 
 def set_current_page(db: Session, item: Title, page: int) -> None:
     """Record the page a book is on. Updating the page means you're reading it."""
     item.current_page = page
-    item.status = Status.IN_PROGRESS
+    _begin(item)
     db.commit()
 
 

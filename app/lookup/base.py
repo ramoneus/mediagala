@@ -39,6 +39,10 @@ class Match:
     seasons: tuple[int, ...] = field(default=())  # episodes per season (series and anime)
     author: str = ""  # books
     pages: int | None = None  # books
+    # Only filled in by details(): what the title page shows beside your own notes.
+    facts: tuple[tuple[str, str], ...] = field(default=())  # (("Director", "Denis Villeneuve"), …)
+    page_url: str = ""  # the title's page on the source's website
+    trailer_url: str = ""  # a YouTube link
 
 
 def _json(response: httpx.Response) -> Any:
@@ -103,6 +107,36 @@ def genre_from_words(text: str, keywords: list[tuple[str, str]]) -> str:
     text = text.lower()
     hits = [(found.start(), genre) for word, genre in keywords if (found := _find(word, text))]
     return min(hits)[1] if hits else ""
+
+
+def facts(*pairs: tuple[str, object]) -> tuple[tuple[str, str], ...]:
+    """Keep the (label, value) pairs that have a value, as text."""
+    return tuple((label, str(value)) for label, value in pairs if value not in (None, "", 0))
+
+
+def names(people: list[str], limit: int = 4) -> str:
+    """ "Amy Adams, Jeremy Renner, Forest Whitaker" from a list of names, without blanks or repeats."""
+    unique = dict.fromkeys(name.strip() for name in people if name and name.strip())
+    return ", ".join(list(unique)[:limit])
+
+
+def duration(minutes: int | None) -> str:
+    """116 -> "1 h 56 min", 24 -> "24 min"."""
+    if not minutes or minutes <= 0:
+        return ""
+    hours, rest = divmod(int(minutes), 60)
+    return f"{hours} h {rest} min" if hours and rest else f"{hours} h" if hours else f"{rest} min"
+
+
+def score(value: float | None, out_of: int) -> str:
+    """A community rating as "7.6/10"; "" when there is none."""
+    return f"{value:.1f}/{out_of}" if value else ""
+
+
+def youtube(video_id: str | None) -> str:
+    """A YouTube link from a video id, only when the id looks like one (it ends up in a link on the page)."""
+    video_id = (video_id or "").strip()
+    return f"https://www.youtube.com/watch?v={video_id}" if re.fullmatch(r"[\w-]{6,20}", video_id) else ""
 
 
 def genre_by_priority(text: str, keywords: list[tuple[str, str]]) -> str:

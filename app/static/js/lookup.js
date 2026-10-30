@@ -12,6 +12,8 @@
   const notice = box.querySelector("[data-lookup-notice]");
   const posterUrl = form.querySelector('input[name="poster_url"]');
   const posterPreview = form.querySelector(".online-poster");
+  const pickedSource = form.querySelector('input[name="lookup_source"]');
+  const pickedId = form.querySelector('input[name="lookup_id"]');
 
   let timer = null;
   let pending = null; // AbortController of the request in flight, so stale answers are dropped
@@ -110,6 +112,9 @@
         });
       }
       if (result.image_url) setPoster(result.image_url);
+      // Remember the pick: on save the server adds its director, cast, links and so on.
+      pickedSource.value = source;
+      pickedId.value = result.source_id;
 
       showResults([]);
       query.value = "";
@@ -146,6 +151,7 @@
       showResults([]);
       say("");
       showSource();
+      pickedSource.value = pickedId.value = ""; // a pick belongs to the kind it was searched as
     }
   });
   showSource();

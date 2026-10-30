@@ -18,7 +18,9 @@ from app.lookup import anilist, openlibrary, tmdb, tvmaze, wikipedia
 from app.lookup.base import HEADERS, TIMEOUT, LookupFailed, Match
 from app.posters import MAX_POSTER_BYTES
 
-__all__ = ["LookupFailed", "Match", "Source", "available_sources", "clear_cache", "fetch_image", "source_for"]
+__all__ = [
+    "LookupFailed", "Match", "Source", "available_sources", "clear_cache", "fetch_image", "source_for", "source_named",
+]
 
 
 @dataclass(frozen=True)
@@ -46,6 +48,11 @@ SOURCES: dict[Kind, tuple[Source, ...]] = {
 def source_for(kind: Kind) -> Source | None:
     """The preferred source that can be used right now."""
     return next((source for source in SOURCES.get(kind, ()) if source.enabled()), None)
+
+
+def source_named(kind: Kind, name: str) -> Source | None:
+    """The source a title was picked from, if it can still be used (TMDB needs its key)."""
+    return next((s for s in SOURCES.get(kind, ()) if s.name == name and s.enabled()), None)
 
 
 def available_sources() -> dict[Kind, Source]:

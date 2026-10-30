@@ -1571,38 +1571,6 @@ input[type="file"]::file-selector-button:hover {
   width: 110px;
 }
 
-/* ---------- Games ---------- */
-
-.game-summary {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 6px 10px;
-  margin: 10px 0 0;
-  color: var(--text-muted);
-  font-size: 0.8125rem;
-}
-
-.completion-tag {
-  padding: 2px 8px;
-  border: 1px solid var(--border);
-  border-radius: 3px;
-  color: var(--text);
-  font-size: 0.75rem;
-  font-weight: 600;
-}
-
-.completion-story_dlc {
-  border-color: rgba(46, 204, 113, 0.5);
-  color: var(--success-text);
-}
-
-.completion-full {
-  border-color: rgba(245, 197, 24, 0.6);
-  background: rgba(245, 197, 24, 0.12);
-  color: var(--gold);
-}
-
 /* The title link covers the whole card; the "next episode" button sits above it and stays clickable. */
 .card-link {
   text-decoration: none;
@@ -1646,60 +1614,166 @@ input[type="file"]::file-selector-button:hover {
 
 /* ---------- Title detail page ---------- */
 
-/* The cover at a portrait size on the left, everything about the title on the right. */
-.detail {
+/* The header is a dark "film still" in both themes, like the navy site header: the cover beside
+   the title, over a blurred and enlarged copy of the cover (or the kind's colour without one). */
+.hero {
+  --hero-tint: #1f4f8f;
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  margin-bottom: 24px;
+  padding: 32px;
+  border-radius: 12px;
+  background: radial-gradient(90% 130% at 10% 20%, var(--hero-tint) 0%, #0d1a2e 75%);
+  color: #eef4fb;
+  box-shadow: var(--shadow);
+}
+
+.hero-movie { --hero-tint: #2a4a7f; }
+.hero-anime { --hero-tint: #4b4396; }
+.hero-game { --hero-tint: #1d6370; }
+.hero-book { --hero-tint: #6e5639; }
+
+.hero-backdrop {
+  position: absolute;
+  inset: 0;
+  z-index: -2;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  filter: blur(36px) saturate(1.4);
+  opacity: 0.7;
+  transform: scale(1.25);
+}
+
+/* A veil over the backdrop keeps the text readable on any cover, light or dark. */
+.hero::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: linear-gradient(100deg, rgba(8, 15, 28, 0.88) 0%, rgba(8, 15, 28, 0.55) 100%);
+}
+
+.hero-inner {
   display: grid;
-  grid-template-columns: minmax(0, 300px) minmax(0, 1fr);
+  grid-template-columns: minmax(0, 240px) minmax(0, 1fr);
   gap: 40px;
-  align-items: start;
-  margin-bottom: 32px;
+  align-items: end;
+}
+
+.detail-poster {
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.35), 0 18px 40px rgba(0, 0, 0, 0.45);
 }
 
 .detail-poster .poster-type {
   inset: 10px;
-  padding: 56px 20px 18px;
-}
-
-.detail-poster .badge {
-  top: 16px;
-  left: 16px;
-}
-
-.detail-poster .rating {
-  top: 16px;
-  right: 16px;
+  padding: 48px 18px 16px;
 }
 
 .detail-poster .poster-type-title {
-  font-size: 1.875rem;
+  font-size: 1.75rem;
 }
 
-.detail-info h1 {
+/* The status and your rating are written next to the cover, in full. */
+.detail-poster .badge,
+.detail-poster .rating {
+  display: none;
+}
+
+.hero .eyebrow {
+  color: #8cc8ff;
+}
+
+.hero-info h1 {
+  color: #fff;
   font-family: var(--font-display);
   font-weight: 800;
-  font-size: clamp(2rem, 4.5vw, 3rem);
+  font-size: clamp(2rem, 4.5vw, 3.25rem);
   letter-spacing: -0.03em;
-  line-height: 1.08;
+  line-height: 1.05;
   overflow-wrap: anywhere;
 }
 
-.detail-meta {
-  margin: 10px 0 0;
-  color: var(--text-muted);
+.hero .detail-author {
+  color: rgba(238, 244, 251, 0.82);
 }
 
-.detail-meta .star {
-  color: var(--gold);
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 16px 0 0;
+  padding: 0;
+  list-style: none;
 }
 
-.detail-description {
-  margin: 20px 0 0;
-  color: var(--text-soft);
-  white-space: pre-line;
+.chips li {
+  padding: 3px 12px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  color: rgba(238, 244, 251, 0.92);
+  font-size: 0.875rem;
+}
+
+.your-take {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 20px;
+  margin-top: 22px;
+}
+
+.status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 14px 5px 12px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.12);
+  color: #fff;
+  font-size: 0.875rem;
+  font-weight: 700;
+}
+
+.status-pill::before {
+  content: "";
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--status-dot, #8cc8ff);
+}
+
+.status-watched { --status-dot: #4ade80; }
+.status-watching { --status-dot: #f5c518; }
+.status-dropped { --status-dot: #ff6b7a; }
+
+.your-rating {
+  color: rgba(238, 244, 251, 0.75);
+  font-size: 1.0625rem;
+}
+
+.your-rating .star {
+  color: #f5c518;
+}
+
+.your-rating strong {
+  color: #fff;
+  font-size: 1.5rem;
+}
+
+.your-rating small {
+  margin-left: 6px;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
 }
 
 .detail-actions {
   display: flex;
+  flex-wrap: wrap;
   gap: 10px;
   margin-top: 24px;
 }
@@ -1707,6 +1781,226 @@ input[type="file"]::file-selector-button:hover {
 .detail-actions form,
 .episodes-actions form {
   margin: 0;
+}
+
+/* Glassy buttons on the dark header. */
+.hero .btn {
+  border-color: rgba(255, 255, 255, 0.22);
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+}
+
+.hero .btn:hover {
+  border-color: rgba(255, 255, 255, 0.4);
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.hero .btn-danger:hover {
+  border-color: #ff6b7a;
+  background: rgba(255, 77, 94, 0.22);
+  color: #ffb3bc;
+}
+
+.btn-icon {
+  width: 42px;
+  padding: 0;
+}
+
+.icon {
+  flex: none;
+}
+
+/* Under the header: what it's about and your notes, with your log and the details beside them. */
+.detail-body {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 340px);
+  gap: 24px;
+  align-items: start;
+}
+
+.detail-main,
+.detail-side {
+  display: grid;
+  gap: 24px;
+  min-width: 0;
+}
+
+.detail-side {
+  position: sticky;
+  top: 88px;
+}
+
+.panel {
+  padding: 22px 24px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+.panel h2 {
+  margin: 0 0 12px;
+  color: var(--text-muted);
+  font-size: 0.75rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.detail-description {
+  margin: 0;
+  color: var(--text-soft);
+  line-height: 1.7;
+  white-space: pre-line;
+}
+
+/* Your own words get a quote bar in the accent colour. */
+.notes-text {
+  margin: 0;
+  padding-left: 16px;
+  border-left: 3px solid var(--accent);
+  font-size: 1.0625rem;
+  line-height: 1.7;
+  white-space: pre-line;
+}
+
+.panel-empty {
+  margin: 0;
+  color: var(--text-muted);
+}
+
+.panel-empty a,
+.panel-hint a {
+  color: var(--accent);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.panel-hint {
+  margin: 14px 0 0;
+  font-size: 0.875rem;
+}
+
+.facts {
+  margin: 0;
+}
+
+.facts div {
+  display: grid;
+  grid-template-columns: 124px minmax(0, 1fr);
+  gap: 12px;
+  padding: 9px 0;
+  border-top: 1px solid var(--border);
+}
+
+.facts div:first-child {
+  padding-top: 0;
+  border-top: 0;
+}
+
+.facts dt {
+  color: var(--text-muted);
+  font-size: 0.8125rem;
+  line-height: 1.6;
+}
+
+.facts dd {
+  margin: 0;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.panel-foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 1px solid var(--border);
+  font-size: 0.875rem;
+}
+
+.panel-foot:empty {
+  display: none;
+}
+
+.panel-foot form {
+  margin: 0;
+}
+
+.panel-foot a,
+.panel-foot .link-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.panel-foot a {
+  color: var(--accent);
+}
+
+.panel-foot .link-button {
+  color: var(--text-muted);
+}
+
+.panel-foot .link-button:hover {
+  color: var(--text);
+}
+
+.panel-notice {
+  margin: 12px 0 0;
+  color: var(--text-muted);
+  font-size: 0.75rem;
+}
+
+/* ---------- Toast ---------- */
+
+/* "Changes saved." pops up at the bottom and fades away (toast.js). */
+.toast {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  z-index: 50;
+  max-width: min(520px, calc(100vw - 32px));
+  padding: 12px 18px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 10px;
+  background: #10213a;
+  color: #eef4fb;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.3);
+  font-size: 0.9375rem;
+  font-weight: 600;
+  transform: translateX(-50%);
+  animation: toast-in 0.25s ease-out;
+  cursor: pointer;
+}
+
+.toast::before {
+  content: "✓";
+  margin-right: 8px;
+  color: #4ade80;
+}
+
+.toast-error::before {
+  content: "!";
+  color: #ff6b7a;
+}
+
+.toast.is-leaving {
+  animation: toast-out 0.3s ease-in forwards;
+}
+
+@keyframes toast-in {
+  from { opacity: 0; transform: translate(-50%, 12px); }
+  to { opacity: 1; transform: translate(-50%, 0); }
+}
+
+@keyframes toast-out {
+  to { opacity: 0; transform: translate(-50%, 12px); }
 }
 
 .episodes-section {
@@ -2137,6 +2431,15 @@ input[type="file"]::file-selector-button:hover {
   .toolbar-actions .btn {
     flex: 1;
   }
+
+  /* Title page: your log and the details go under the notes. */
+  .detail-body {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .detail-side {
+    position: static;
+  }
 }
 
 @media (max-width: 640px) {
@@ -2248,10 +2551,6 @@ input[type="file"]::file-selector-button:hover {
     font-size: 0.6875rem;
   }
 
-  .detail-poster {
-    width: min(240px, 72%);
-  }
-
   /* On phones the quick add spans the screen under the header. */
   .quick-add {
     right: 8px;
@@ -2270,9 +2569,28 @@ input[type="file"]::file-selector-button:hover {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
-  .detail {
-    grid-template-columns: 1fr;
+  /* The cover above the title, a little smaller. */
+  .hero {
+    margin-right: -8px;
+    margin-left: -8px;
+    padding: 20px;
+  }
+
+  .hero-inner {
+    grid-template-columns: minmax(0, 1fr);
     gap: 20px;
+  }
+
+  .detail-poster {
+    width: min(190px, 56%);
+  }
+
+  .panel {
+    padding: 18px;
+  }
+
+  .facts div {
+    grid-template-columns: 96px minmax(0, 1fr);
   }
 
   .episodes-section {

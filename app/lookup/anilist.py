@@ -3,6 +3,7 @@
 AniList lists every season of a show as its own entry, so a result fills in one season.
 """
 
+from dataclasses import replace
 from functools import lru_cache
 
 from app.catalog import SCREEN_GENRES
@@ -25,7 +26,35 @@ SEARCH_QUERY = (
     "query ($q: String) { Page(perPage: %d) { media(search: $q, type: ANIME, isAdult: false, sort: SEARCH_MATCH)"
     " { %s } } }" % (MAX_RESULTS, FIELDS)
 )
-DETAILS_QUERY = "query ($id: Int) { Media(id: $id, type: ANIME) { %s } }" % FIELDS
+DETAIL_FIELDS = (
+    "format status duration averageScore source studios(isMain: true) { nodes { name } } trailer { id site }"
+)
+DETAILS_QUERY = "query ($id: Int) { Media(id: $id, type: ANIME) { %s %s } }" % (FIELDS, DETAIL_FIELDS)
+# AniList's codes, in words.
+FORMATS = {"TV": "TV series", "TV_SHORT": "TV short", "MOVIE": "Movie", "SPECIAL": "Special", "OVA": "OVA",
+           "ONA": "Web series", "MUSIC": "Music video"}
+STATUSES = {"FINISHED": "Finished", "RELEASING": "Airing", "NOT_YET_RELEASED": "Not aired yet",
+            "CANCELLED": "Cancelled", "HIATUS": "On hiatus"}
+ORIGINS = {"MANGA": "Manga", "LIGHT_NOVEL": "Light novel", "NOVEL": "Novel", "VISUAL_NOVEL": "Visual novel",
+           "VIDEO_GAME": "Video game", "WEB_NOVEL": "Web novel", "ORIGINAL": "Original story"}
+
+
+def _facts(media: dict) -> tuple[tuple[str, str], ...]:
+    studios = (media.get("studios") or {}).get("nodes") or []
+    average = media.get("averageScore")  # out of 100
+    return base.facts(
+        ("Studio", base.names([studio.get("name") for studio in studios], 2)),
+        ("Format", FORMATS.get(media.get("format") or "", "")),
+        ("Based on", ORIGINS.get(media.get("source") or "", "")),
+        ("Status", STATUSES.get(media.get("status") or "", "")),
+        ("Episode length", base.duration(media.get("duration"))),
+        ("Rating on AniList", base.score(average / 10 if average else None, 10)),
+    )
+
+
+def _trailer(media: dict) -> str:
+    trailer = media.get("trailer") or {}
+    return base.youtube(trailer.get("id")) if trailer.get("site") == "youtube" else ""
 
 
 def _match(media: dict) -> Match:
@@ -57,4 +86,8 @@ def details(media_id: str) -> Match | None:
         return None
     body = base.post_json(API, {"query": DETAILS_QUERY, "variables": {"id": int(media_id)}}) or {}
     media = (body.get("data") or {}).get("Media")
-    return _match(media) if media else None
+    if not media:
+        return None
+    return replace(
+        _match(media), facts=_facts(media), page_url=f"https://anilist.co/anime/{media_id}", trailer_url=_trailer(media)
+    )

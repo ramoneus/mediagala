@@ -1,9 +1,9 @@
 """SQLAlchemy ORM models."""
 
 import enum
-from datetime import datetime
+from datetime import date, datetime
 
-from sqlalchemy import CheckConstraint, DateTime, Enum, ForeignKey, String, Text, UniqueConstraint, func
+from sqlalchemy import JSON, CheckConstraint, DateTime, Enum, ForeignKey, String, Text, UniqueConstraint, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.catalog import Completion, Kind, Status
@@ -46,6 +46,18 @@ class Title(Base):
     author: Mapped[str] = mapped_column(String(200), default="")
     pages: Mapped[int | None]
     current_page: Mapped[int | None]
+    # Yours, for every kind: where you watch/play/read it, when, and what you thought.
+    platform: Mapped[str] = mapped_column(String(50), default="")
+    started_on: Mapped[date | None]
+    finished_on: Mapped[date | None]
+    notes: Mapped[str] = mapped_column(Text, default="")
+    # From the online database the title was picked from (see app/lookup). The links are
+    # built by the app from ids, never taken from the form.
+    source: Mapped[str] = mapped_column(String(30), default="")  # e.g. "TMDB"
+    source_id: Mapped[str] = mapped_column(String(100), default="")
+    facts: Mapped[list[list[str]]] = mapped_column(JSON, default=list)  # [["Director", "Denis Villeneuve"], …]
+    source_url: Mapped[str] = mapped_column(String(300), default="")
+    trailer_url: Mapped[str] = mapped_column(String(300), default="")
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), onupdate=func.now())
 
@@ -69,6 +81,13 @@ class Title(Base):
     def status_label(self) -> str:
         """The status as this kind calls it, e.g. "Completed" for a finished game."""
         return self.kind.config.status_labels.get(self.status, self.status.value.capitalize())
+
+    @property
+    def days_spent(self) -> int | None:
+        """Calendar days from start to finish, both counted: started and finished the same day is 1."""
+        if self.started_on is None or self.finished_on is None:
+            return None
+        return (self.finished_on - self.started_on).days + 1
 
     # --- Episode progress (series only). Seasons are always numbered 1..n. ---
 

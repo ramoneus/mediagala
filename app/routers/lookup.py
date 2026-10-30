@@ -107,7 +107,7 @@ def quick_add(kind: str, source_id: str, db: DbSession) -> JSONResponse:
         except (lookup.LookupFailed, posters.PosterError):
             pass  # added without an image: it gets a typeset cover instead
     try:
-        item = crud.create_title(db, data, poster_filename=filename)
+        item = crud.create_title(db, data, poster_filename=filename, online=(source.name, match))
     except Exception:
         posters.delete_poster(filename)  # don't leave an orphaned file behind
         raise

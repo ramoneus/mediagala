@@ -48,6 +48,33 @@ ARRIVAL_TMDB = {
     "poster_path": "/x2FJsf1ElAgr63Y3PNPtJrcmpoe.jpg",
     "genre_ids": [18, 878, 9648],  # Drama, Science Fiction, Mystery
 }
+# What only the details requests return: credits, videos, studios and the like.
+ARRIVAL_TMDB_EXTRAS = {
+    "runtime": 116,
+    "vote_average": 7.638,
+    "vote_count": 19000,
+    "credits": {
+        "cast": [{"name": "Amy Adams"}, {"name": "Jeremy Renner"}, {"name": "Forest Whitaker"},
+                 {"name": "Michael Stuhlbarg"}, {"name": "Mark O'Brien"}],
+        "crew": [{"name": "Denis Villeneuve", "job": "Director"}, {"name": "Eric Heisserer", "job": "Screenplay"},
+                 {"name": "Ted Chiang", "job": "Short Story"}],
+    },
+    "videos": {"results": [
+        {"site": "YouTube", "type": "Clip", "official": True, "key": "clip123456"},
+        {"site": "YouTube", "type": "Trailer", "official": False, "key": "fanmade123"},
+        {"site": "YouTube", "type": "Trailer", "official": True, "key": "tFMo3UJ4B4g"},
+    ]},
+}
+SEVERANCE_EXTRAS = {"network": None, "webChannel": {"name": "Apple TV+"}, "status": "Running", "averageRuntime": 49,
+                    "rating": {"average": 8.4}}
+SEVERANCE_PEOPLE = {
+    "cast": [{"person": {"name": "Adam Scott"}}, {"person": {"name": "Britt Lower"}}, {"person": None}],
+    "crew": [{"type": "Creator", "person": {"name": "Dan Erickson"}}, {"type": "Casting", "person": {"name": "X"}}],
+}
+FRIEREN_EXTRAS = {"format": "TV", "status": "FINISHED", "duration": 24, "averageScore": 89, "source": "MANGA",
+                  "studios": {"nodes": [{"name": "Madhouse"}]}, "trailer": {"id": "qgQHnKEf4VE\t", "site": "youtube"}}
+NAME_OF_THE_WIND_EXTRAS = {"person": ["Kvothe", "Denna", "Bast"], "place": ["Imre", "Tarbean"], "edition_count": 112,
+                           "ratings_average": 4.41, "ratings_count": 350}
 WIKIPEDIA_PAGES = {
     "arrival": [
         {"key": "Arrival", "title": "Arrival", "description": "Topics referred to by the same term"},
@@ -110,7 +137,7 @@ def fake_get(url, params=None, headers=None):
             return {"results": [ARRIVAL_TMDB]}
         if url == f"{tmdb.API}/movie/329865":
             genres = [{"id": 18, "name": "Drama"}, {"id": 878, "name": "Science Fiction"}, {"id": 9648, "name": "Mystery"}]
-            return {**ARRIVAL_TMDB, "genres": genres}
+            return {**ARRIVAL_TMDB, "genres": genres, **ARRIVAL_TMDB_EXTRAS}
         return None
     if url == f"{tvmaze.API}/search/shows":
         return [{"score": 0.9, "show": SEVERANCE}]
@@ -120,14 +147,16 @@ def fake_get(url, params=None, headers=None):
             {"number": 2, "episodeOrder": None},  # no total given: count the episodes
             {"number": 3, "episodeOrder": None},  # announced, nothing yet: skipped
         ]
-        return {**SEVERANCE, "_embedded": {"seasons": seasons, "episodes": [{"season": 2}] * 10}}
+        embedded = {"seasons": seasons, "episodes": [{"season": 2}] * 10, **SEVERANCE_PEOPLE}
+        return {**SEVERANCE, **SEVERANCE_EXTRAS, "_embedded": embedded}
     if url == wikipedia.SEARCH_API:
         return {"pages": WIKIPEDIA_PAGES.get(params["q"], [])}
     if url.startswith(wikipedia.SUMMARY_API):
         return WIKIPEDIA_SUMMARIES.get(url.rsplit("/", 1)[1])
     if url == f"{openlibrary.API}/search.json":
-        found = params["q"] in ("the name of the wind", "key:/works/OL8479867W")
-        return {"docs": [NAME_OF_THE_WIND] if found else []}
+        if params["q"] == "key:/works/OL8479867W":
+            return {"docs": [{**NAME_OF_THE_WIND, **NAME_OF_THE_WIND_EXTRAS}]}
+        return {"docs": [NAME_OF_THE_WIND] if params["q"] == "the name of the wind" else []}
     if url == f"{openlibrary.API}/works/OL8479867W.json":
         return {"description": {"value": "***The Name of the Wind*** is a fantasy novel.\r\n----------\nSee also: …"},
                 "subjects": ["Fantasy fiction"]}
@@ -139,7 +168,7 @@ def fake_post(url, payload):
     variables = payload["variables"]
     if "q" in variables:
         return {"data": {"Page": {"media": [FRIEREN]}}}
-    return {"data": {"Media": FRIEREN if variables["id"] == 154587 else None}}
+    return {"data": {"Media": {**FRIEREN, **FRIEREN_EXTRAS} if variables["id"] == 154587 else None}}
 
 
 def offline(*args, **kwargs):
@@ -217,6 +246,23 @@ def test_open_library_books():
     assert book.description == "The Name of the Wind is a fantasy novel."
     assert openlibrary.details("OL1W") is None
     assert openlibrary.details("../../etc") is None
+
+
+@pytest.mark.parametrize(
+    ("subjects", "genre"),
+    [
+        # The Hobbit: one graphic-novel edition doesn't make it a comic.
+        (["Fantasy", "Graphic novels", "Comics & graphic novels, fantasy", "Fantasy fiction", "hobbits",
+          "Fiction, fantasy, general"], "Fantasy"),
+        (["Graphic novels", "Comic books, strips", "Superheroes", "Fiction"], "Comics & Manga"),
+        (["Fiction", "Classic Literature", "Fiction"], "Fiction"),  # broad genres only when nothing else fits
+        (["Fiction", "Classic Literature", "Classics"], "Classics"),
+        (["Love stories", "Mystery fiction"], "Mystery"),  # a tie goes to the more specific genre in the list
+        (["orphans", "Cats"], ""),
+    ],
+)
+def test_book_genre_is_what_most_subjects_say(subjects, genre):
+    assert openlibrary._genre(subjects) == genre
 
 
 @pytest.mark.parametrize(
@@ -500,3 +546,238 @@ def test_picked_cover_survives_a_form_error(client):
     response = client.post("/titles", data=series_form(title="", poster_url="https://static.tvmaze.com/o.jpg"))
     assert response.status_code == 422
     assert 'name="poster_url" value="https://static.tvmaze.com/o.jpg"' in response.text
+
+
+# --- Details: credits, links and trailers for the title's page ---
+
+
+def test_tmdb_details_have_credits_and_the_official_trailer(tmdb_key):
+    movie = tmdb.details("329865")
+    assert dict(movie.facts) == {
+        "Director": "Denis Villeneuve",
+        "Writers": "Eric Heisserer",  # the screenplay, not the short story it's based on
+        "Starring": "Amy Adams, Jeremy Renner, Forest Whitaker, Michael Stuhlbarg",
+        "Runtime": "1 h 56 min",
+        "Rating on TMDB": "7.6/10",
+    }
+    assert movie.trailer_url == "https://www.youtube.com/watch?v=tFMo3UJ4B4g"  # official beats fan-made
+    assert movie.page_url == "https://www.themoviedb.org/movie/329865"
+    assert tmdb_calls[-1][0]["append_to_response"] == "credits,videos"  # still one request
+    assert tmdb.search("arrival")[0].facts == ()  # search results stay light
+
+
+def test_tvmaze_details():
+    series = tvmaze.details("44933")
+    assert dict(series.facts) == {
+        "Created by": "Dan Erickson",
+        "Starring": "Adam Scott, Britt Lower",  # cast entries without a person are skipped
+        "Network": "Apple TV+",  # a streaming channel when there's no TV network
+        "Status": "Running",
+        "Episode length": "49 min",
+        "Rating on TVmaze": "8.4/10",
+    }
+    assert series.page_url == "https://www.tvmaze.com/shows/44933"
+
+
+def test_anilist_details():
+    anime = anilist.details("154587")
+    assert dict(anime.facts) == {
+        "Studio": "Madhouse", "Format": "TV series", "Based on": "Manga", "Status": "Finished",
+        "Episode length": "24 min", "Rating on AniList": "8.9/10",
+    }
+    assert anime.trailer_url == "https://www.youtube.com/watch?v=qgQHnKEf4VE"  # AniList's stray tab trimmed
+    assert anime.page_url == "https://anilist.co/anime/154587"
+
+
+def test_open_library_details():
+    book = openlibrary.details("OL8479867W")
+    assert dict(book.facts) == {
+        "Characters": "Kvothe, Denna, Bast", "Setting": "Imre, Tarbean", "Editions": "112",
+        "Rating on Open Library": "4.4/5",
+    }
+    assert book.page_url == "https://openlibrary.org/works/OL8479867W"
+
+
+def test_wikipedia_details_link_to_the_article():
+    movie = wikipedia.movie_details("Arrival_(film)")
+    assert dict(movie.facts) == {"Director": "Denis Villeneuve"}
+    assert movie.page_url == "https://en.wikipedia.org/wiki/Arrival_%28film%29"
+    assert dict(wikipedia.game_details("Hades_(video_game)").facts) == {"Developer": "Supergiant Games"}
+
+
+@pytest.mark.parametrize(
+    ("text", "verb", "names"),
+    [
+        ("Arrival is a 2016 film directed by Denis Villeneuve and written by Eric Heisserer.", "directed",
+         "Denis Villeneuve"),
+        ("…a dark fantasy film produced, written, and directed by Guillermo del Toro.", "directed",
+         "Guillermo del Toro"),
+        ("…film written, directed, produced, and edited by Joel and Ethan Coen, based on…", "directed",
+         "Joel and Ethan Coen"),
+        ("…film directed by Bong Joon Ho, who co-wrote the screenplay.", "directed", "Bong Joon Ho"),
+        ("…a sandbox game developed and published by the Swedish company Mojang Studios. Following…",
+         "developed and published", "Mojang Studios"),
+        ('…a farm life simulation video game developed by Eric "ConcernedApe" Barone. Players…', "[Dd]eveloped",
+         "Eric Barone"),
+        ("…George R. R. Martin. Developed by FromSoftware and published by Bandai Namco Entertainment, it was…",
+         "[Dd]eveloped", "FromSoftware"),
+        ("…and published by Bandai Namco Entertainment, it was first released…", "published",
+         "Bandai Namco Entertainment"),
+        ("Created by D. B. Weiss.", "Created", "D. B. Weiss"),
+        ("A film about a man who was directed by fate.", "directed", ""),  # no name: nothing
+        ("Nothing to see here.", "directed", ""),
+    ],
+)
+def test_wikipedia_credits_from_a_sentence(text, verb, names):
+    assert wikipedia.credit(text, verb) == names
+
+
+@pytest.mark.parametrize(
+    ("text", "names"),
+    [
+        ("The film stars Amy Adams as Louise Banks, a linguist engaged by the Army.", "Amy Adams"),
+        ("It stars Song Kang-ho, Lee Sun-kyun, Cho Yeo-jeong, Choi Woo-shik, and Park So-dam.",
+         "Song Kang-ho, Lee Sun-kyun, Cho Yeo-jeong, Choi Woo-shik"),  # the first four
+        ("Starring Tommy Lee Jones, Javier Bardem, and Josh Brolin, the film is set in Texas.",
+         "Tommy Lee Jones, Javier Bardem, Josh Brolin"),
+        ("A film with no cast list.", ""),
+    ],
+)
+def test_wikipedia_cast_from_a_sentence(text, names):
+    assert wikipedia.stars(text) == names
+
+
+@pytest.mark.parametrize(
+    ("video_id", "url"),
+    [("tFMo3UJ4B4g", "https://www.youtube.com/watch?v=tFMo3UJ4B4g"), (" qgQHnKEf4VE\t", "https://www.youtube.com/watch?v=qgQHnKEf4VE"),
+     ('x"><script>', ""), ("../../evil", ""), ("", ""), (None, "")],
+)
+def test_trailer_links_are_only_built_from_real_video_ids(video_id, url):
+    assert base.youtube(video_id) == url
+
+
+def test_helpers_for_details():
+    assert [base.duration(m) for m in (116, 60, 24, 0, None)] == ["1 h 56 min", "1 h", "24 min", "", ""]
+    assert base.names(["A", " B ", "", None, "A", "C", "D", "E"]) == "A, B, C, D"  # no blanks or repeats
+    assert base.facts(("Director", "X"), ("Runtime", ""), ("Editions", 0)) == (("Director", "X"),)
+
+
+def test_quick_add_keeps_the_details(client, db):
+    item = db.get(Title, client.post("/lookup/anime/154587/add").json()["id"])
+    assert (item.source, item.source_id) == ("AniList", "154587")
+    assert ["Studio", "Madhouse"] in item.facts
+    assert item.source_url == "https://anilist.co/anime/154587"
+    assert item.trailer_url == "https://www.youtube.com/watch?v=qgQHnKEf4VE"
+
+
+def test_the_form_saves_the_details_of_the_picked_result(client, db):
+    response = client.post("/titles", data=series_form(title="Severance", lookup_source="TVmaze", lookup_id="44933"))
+    assert response.status_code == 303
+    item = db.query(Title).one()
+    assert (item.source, item.source_id, item.source_url) == ("TVmaze", "44933", "https://www.tvmaze.com/shows/44933")
+    assert ["Created by", "Dan Erickson"] in item.facts
+
+
+@pytest.mark.parametrize(
+    ("source", "source_id"),
+    [("TMDB", "329865"),  # no key set: TMDB can't be used
+     ("Evil", "1"), ("TVmaze", "123"), ("TVmaze", "../x"), ("", "")],
+)
+def test_a_bad_pick_saves_the_title_without_details(client, db, source, source_id):
+    response = client.post("/titles", data=form(lookup_source=source, lookup_id=source_id))
+    assert response.status_code == 303
+    item = db.query(Title).one()
+    assert (item.source, item.facts, item.source_url) == ("", [], "")
+
+
+def test_details_are_never_taken_from_the_form(client, db):
+    fields = series_form(lookup_source="TVmaze", lookup_id="44933", source_url="https://evil.example",
+                         trailer_url="javascript:alert(1)", facts="[]")
+    client.post("/titles", data=fields)
+    item = db.query(Title).one()
+    assert item.source_url == "https://www.tvmaze.com/shows/44933" and item.trailer_url == ""
+
+
+def test_service_down_while_saving_still_saves(client, db, monkeypatch):
+    monkeypatch.setattr(base, "get_json", offline)
+    response = client.post("/titles", data=series_form(lookup_source="TVmaze", lookup_id="44933"))
+    assert response.status_code == 303
+    assert db.query(Title).one().facts == []
+
+
+def test_editing_without_a_new_pick_keeps_the_details(client, db):
+    item = db.get(Title, client.post("/lookup/series/44933/add").json()["id"])
+    fields = form(kind="series", genre="Drama", title="Severance", year="2022", season_episodes=["9", "10"])
+    assert client.post(f"/titles/{item.id}/edit", data=fields).status_code == 303
+    db.refresh(item)
+    assert item.source == "TVmaze" and item.facts
+
+
+def test_title_page_shows_the_details(client, db):
+    item = db.get(Title, client.post("/lookup/anime/154587/add").json()["id"])
+    page = client.get(f"/titles/{item.id}").text
+    assert "<dt>Studio</dt><dd>Madhouse</dd>" in page
+    assert 'href="https://www.youtube.com/watch?v=qgQHnKEf4VE"' in page and "Trailer" in page
+    assert 'href="https://anilist.co/anime/154587"' in page
+    assert 'rel="noopener noreferrer"' in page
+    assert "Refresh" in page
+
+
+def test_tmdb_credit_on_the_title_page(client, db, tmdb_key):
+    client.post("/titles", data=form(lookup_source="TMDB", lookup_id="329865"))
+    page = client.get(f"/titles/{db.query(Title).one().id}").text
+    assert tmdb.NOTICE in page and "<li>1 h 56 min</li>" in page  # the runtime is a chip, not a detail row
+
+
+# --- "Get details" for titles added before (or by hand) ---
+
+
+def test_get_details_finds_the_title_by_name_and_year(client, db, make_title):
+    item = make_title(title="severance", kind="series", genre="Drama", year=2022, seasons=["9"])
+    response = client.post(f"/titles/{item.id}/details")
+    assert response.headers["location"] == f"/titles/{item.id}?msg=details"
+    db.refresh(item)
+    assert (item.source, item.source_id) == ("TVmaze", "44933")
+    assert item.description == "Mark leads a team at Lumon & finds a mystery."  # was empty: filled in
+    assert item.poster_filename.endswith(".webp")  # had none: downloaded
+    assert item.title == "severance"  # your own fields are left alone
+
+
+def test_get_details_keeps_what_you_wrote(client, db, make_title):
+    item = make_title(title="Severance", kind="series", genre="Drama", year=2022, seasons=["9"], description="Mine.")
+    client.post(f"/titles/{item.id}/details")
+    db.refresh(item)
+    assert item.description == "Mine." and item.facts
+
+
+def test_get_details_uses_the_source_it_was_picked_from(client, db, make_title):
+    item = db.get(Title, client.post("/lookup/series/44933/add").json()["id"])
+    item.facts = []
+    db.commit()
+    client.post(f"/titles/{item.id}/details")
+    db.refresh(item)
+    assert item.facts
+
+
+def test_get_details_for_something_not_online(client, make_title):
+    item = make_title(title="My Home Video", year=2020)
+    response = client.post(f"/titles/{item.id}/details")
+    assert response.headers["location"] == f"/titles/{item.id}?msg=details_missing"
+    assert "Find it online" in client.get(response.headers["location"]).text
+
+
+def test_get_details_with_another_year_is_not_a_match(client, make_title):
+    item = make_title(title="Severance", kind="series", genre="Drama", year=1999, seasons=["9"])
+    assert client.post(f"/titles/{item.id}/details").headers["location"].endswith("msg=details_missing")
+
+
+def test_get_details_while_offline(client, monkeypatch, make_title):
+    item = make_title(title="Severance", kind="series", genre="Drama", year=2022, seasons=["9"])
+    monkeypatch.setattr(base, "get_json", offline)
+    assert client.post(f"/titles/{item.id}/details").headers["location"].endswith("msg=details_offline")
+
+
+def test_title_page_offers_to_get_details(client, make_title):
+    item = make_title(title="Severance", kind="series", genre="Drama", year=2022, seasons=["9"])
+    page = client.get(f"/titles/{item.id}").text
+    assert f'action="/titles/{item.id}/details"' in page and "Get details from TVmaze" in page

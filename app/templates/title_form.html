@@ -40,7 +40,8 @@
   {# Per-kind genres and status labels for title-form.js (tojson escapes it for safe embedding). #}
   <script type="application/json" id="kind-config">{{ form_config|tojson }}</script>
 
-  <form method="post" action="{{ '/titles/%d/edit'|format(item.id) if item else '/titles' }}" class="title-form" enctype="multipart/form-data" novalidate>
+  <form method="post" action="{{ '/titles/%d/edit'|format(item.id) if item else '/titles' }}" class="title-form" enctype="multipart/form-data" novalidate
+        data-today="{{ today }}"{% if item %} data-editing{% endif %}>
     <fieldset class="form-field form-field-wide">
       <legend>Type</legend>
       <div class="segmented">
@@ -64,6 +65,9 @@
       <ul class="lookup-results" id="lookup-results" hidden></ul>
       <p class="field-hint" id="lookup-status" aria-live="polite"></p>
       <p class="lookup-notice" data-lookup-notice></p>
+      {# The picked result: on save the server fetches its credits and links from the source itself. #}
+      <input type="hidden" name="lookup_source" value="{{ form.get('lookup_source') or '' }}">
+      <input type="hidden" name="lookup_id" value="{{ form.get('lookup_id') or '' }}">
     </div>
 
     <div class="form-field form-field-wide">
@@ -184,6 +188,35 @@
       {{ field_error('progress_season') }}
       {{ field_error('progress_episode') }}
     </fieldset>
+
+    <div class="form-field form-field-wide" id="platform-field">
+      <label for="platform"><span data-platform-label>{{ current_kind.config.platform_label }}</span> <span class="optional">(optional)</span></label>
+      <input type="text" id="platform" name="platform" value="{{ form.get('platform') or '' }}" maxlength="50"
+             list="platform-options" autocomplete="off" {{ invalid('platform') }}>
+      <datalist id="platform-options">
+        {% for p in current_kind.config.platforms %}<option value="{{ p }}">{% endfor %}
+      </datalist>
+      <p class="field-hint">Pick a suggestion or type your own.</p>
+      {{ field_error('platform') }}
+    </div>
+
+    <div class="form-field" {{ show_when(kinds=started_kinds, statuses="watching watched dropped") }}>
+      <label for="started_on">Started on <span class="optional">(optional)</span></label>
+      <input type="date" id="started_on" name="started_on" value="{{ form.get('started_on') or '' }}" max="{{ today }}" {{ invalid('started_on') }}>
+      {{ field_error('started_on') }}
+    </div>
+
+    <div class="form-field" {{ show_when(statuses="watched dropped") }}>
+      <label for="finished_on"><span data-finished-label>{{ finished_on_label }}</span> <span class="optional">(optional)</span></label>
+      <input type="date" id="finished_on" name="finished_on" value="{{ form.get('finished_on') or '' }}" max="{{ today }}" {{ invalid('finished_on') }}>
+      {{ field_error('finished_on') }}
+    </div>
+
+    <div class="form-field form-field-wide">
+      <label for="notes">Your notes <span class="optional">(optional, only you see them)</span></label>
+      <textarea id="notes" name="notes" rows="4" maxlength="{{ max_notes }}" placeholder="What did you think? Favourite moments, who recommended it…" {{ invalid('notes') }}>{{ form.get('notes') or '' }}</textarea>
+      {{ field_error('notes') }}
+    </div>
 
     <div class="form-field form-field-wide">
       <label for="description">Description <span class="optional">(optional)</span></label>

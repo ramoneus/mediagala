@@ -40,9 +40,10 @@ def test_invalid_form_keeps_the_input_and_shows_errors(client, db):
 def test_edit_title(client, db, make_title):
     item = make_title()
     response = client.post(f"/titles/{item.id}/edit", data=form(title="Arrival (2016)", status="watched", rating="9"))
-    assert response.headers["location"] == "/?msg=updated"
+    assert response.headers["location"] == f"/titles/{item.id}?msg=updated"  # back to its page, with a toast
     db.refresh(item)
     assert (item.title, item.rating) == ("Arrival (2016)", 9)
+    assert 'class="toast"' in client.get(response.headers["location"]).text
 
 
 def test_delete_title(client, make_title):

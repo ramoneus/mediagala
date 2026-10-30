@@ -1,5 +1,6 @@
 """Shared Jinja2 environment (autoescaping is enabled for .html templates)."""
 
+from datetime import date, datetime
 from pathlib import Path
 
 from fastapi.templating import Jinja2Templates
@@ -36,5 +37,11 @@ def lookup_sources() -> dict[str, dict[str, str]]:
     }
 
 
+def nice_date(value: date | datetime | None) -> str:
+    """12 Oct 2026 (no zero-padded day, the same on every operating system)."""
+    return f"{value.day} {value:%b %Y}" if value else ""
+
+
 templates.env.globals["static_url"] = static_url
 templates.env.globals["lookup_sources"] = lookup_sources
+templates.env.filters["nice_date"] = nice_date

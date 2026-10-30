@@ -1,39 +1,90 @@
 {% extends "base.html" %}
+{% from "partials/icons.html" import icon %}
 
 {% block title %}{{ item.title }} · MediaGala{% endblock %}
 
+{% block scripts %}
+<script src="{{ static_url('js/toast.js') }}" defer></script>
+{% endblock %}
+
 {% block content %}
+{% if flash %}
+  <div class="toast{% if flash_is_error %} toast-error{% endif %}" role="status">{{ flash }}</div>
+{% endif %}
 <a href="/" class="back-link">← Back to collection</a>
 
-<section class="detail">
-  {% set poster_class = "detail-poster" %}
-  {% include "partials/poster.html" %}
+{# Shown as chips in the header rather than in the list of details. #}
+{% set runtime = item.facts|selectattr(0, "equalto", "Runtime")|map(attribute=1)|first %}
+{% set episode_count = item.total_episodes if item.kind.has_episodes else 0 %}
 
-  <div class="detail-info">
-    <p class="eyebrow">{{ item.kind.label }}</p>
-    <h1>{{ item.title }}</h1>
-    {% if item.kind.has_pages and item.author %}
-      <p class="detail-author">by {{ item.author }}</p>
-    {% endif %}
-    <p class="detail-meta">
-      {{ item.year }} · {{ item.genre }}
-      {% if item.kind.has_episodes %} · {{ item.seasons|length }} {{ "season" if item.seasons|length == 1 else "seasons" }}{% endif %}
-      {% if item.kind.has_pages and item.pages %} · {{ item.pages }} pages{% endif %}
-      {% if item.rating %} · <span class="star">★</span> {{ item.rating }}/10{% endif %}
-    </p>
-    {% include "partials/game_summary.html" %}
-    {% if item.description %}
-      <p class="detail-description">{{ item.description }}</p>
-    {% endif %}
-    <div class="detail-actions">
-      <a class="btn" href="/titles/{{ item.id }}/edit">Edit</a>
-      <form method="post" action="/titles/{{ item.id }}/delete"
-            onsubmit="return confirm('Delete this title? This cannot be undone.');">
-        <button type="submit" class="btn btn-danger">Delete</button>
-      </form>
+<section class="hero hero-{{ item.kind.value }}">
+  {# The cover, blurred and enlarged, tints the header like a film still. #}
+  {% if item.poster_filename %}
+    <img class="hero-backdrop" src="/posters/{{ item.poster_filename }}" alt="" aria-hidden="true">
+  {% endif %}
+  <div class="hero-inner">
+    {% set poster_class = "detail-poster" %}
+    {% include "partials/poster.html" %}
+
+    <div class="hero-info">
+      <p class="eyebrow">{{ item.kind.label }} · {{ item.genre }}</p>
+      <h1>{{ item.title }}</h1>
+      {% if item.kind.has_pages and item.author %}
+        <p class="detail-author">by {{ item.author }}</p>
+      {% endif %}
+      <ul class="chips" aria-label="At a glance">
+        <li>{{ item.year }}</li>
+        {% if runtime %}<li>{{ runtime }}</li>{% endif %}
+        {% if item.kind.has_episodes and item.seasons %}
+          <li>{{ item.seasons|length }} {{ "season" if item.seasons|length == 1 else "seasons" }} · {{ episode_count }} episodes</li>
+        {% endif %}
+        {% if item.kind.has_pages and item.pages %}<li>{{ item.pages }} pages</li>{% endif %}
+      </ul>
+
+      <div class="your-take">
+        <span class="status-pill status-{{ item.status.value }}">{{ item.status_label }}</span>
+        {% if item.rating %}
+          <span class="your-rating"><span class="star" aria-hidden="true">★</span> <strong>{{ item.rating }}</strong>/10
+            <small>your rating</small></span>
+        {% endif %}
+      </div>
+
+      <div class="detail-actions">
+        {% if item.trailer_url %}
+          <a class="btn" href="{{ item.trailer_url }}" target="_blank" rel="noopener noreferrer">
+            {{ icon("play") }} Trailer <span class="sr-only">(opens YouTube)</span>
+          </a>
+        {% endif %}
+        <a class="btn" href="/titles/{{ item.id }}/edit">{{ icon("edit") }} Edit</a>
+        <form method="post" action="/titles/{{ item.id }}/delete"
+              onsubmit="return confirm('Delete this title? This cannot be undone.');">
+          <button type="submit" class="btn btn-ghost btn-danger btn-icon" aria-label="Delete" title="Delete">{{ icon("trash") }}</button>
+        </form>
+      </div>
     </div>
   </div>
 </section>
+
+<div class="detail-body">
+  <div class="detail-main">
+    <section class="panel" aria-labelledby="about-heading">
+      <h2 id="about-heading">About</h2>
+      {% if item.description %}
+        <p class="detail-description">{{ item.description }}</p>
+      {% else %}
+        <p class="panel-empty">No description yet.</p>
+      {% endif %}
+    </section>
+
+    <section class="panel notes" aria-labelledby="notes-heading">
+      <h2 id="notes-heading">Your notes</h2>
+      {% if item.notes %}
+        <p class="notes-text">{{ item.notes }}</p>
+      {% else %}
+        <p class="panel-empty">What did you think? Favourite moments, who recommended it, what to remember…
+          <a href="/titles/{{ item.id }}/edit#notes">Add notes →</a></p>
+      {% endif %}
+    </section>
 
 {% if item.kind.has_pages %}
   <section class="episodes-section" aria-labelledby="reading-heading">
@@ -118,4 +169,60 @@
     </form>
   </section>
 {% endif %}
+  </div>
+
+  <aside class="detail-side">
+    <section class="panel" aria-labelledby="log-heading">
+      <h2 id="log-heading">Your log</h2>
+      <dl class="facts">
+        {% if item.platform %}<div><dt>{{ item.kind.config.platform_label }}</dt><dd>{{ item.platform }}</dd></div>{% endif %}
+        {% if item.started_on %}<div><dt>Started</dt><dd>{{ item.started_on|nice_date }}</dd></div>{% endif %}
+        {% if item.finished_on %}<div><dt>{{ item.status_label }}</dt><dd>{{ item.finished_on|nice_date }}</dd></div>{% endif %}
+        {% if item.days_spent %}
+          <div><dt>Took</dt><dd>{{ item.days_spent }} {{ "day" if item.days_spent == 1 else "days" }}</dd></div>
+        {% endif %}
+        {% if item.completion %}<div><dt>Completion</dt><dd>{{ item.completion.label }}</dd></div>{% endif %}
+        {% if item.hours_played is not none %}<div><dt>Played</dt><dd>{{ item.hours_played }} h</dd></div>{% endif %}
+        <div><dt>Added</dt><dd>{{ item.created_at|nice_date }}</dd></div>
+      </dl>
+      {% if not (item.platform or item.started_on or item.finished_on) %}
+        <p class="panel-hint"><a href="/titles/{{ item.id }}/edit#platform">Add where and when →</a></p>
+      {% endif %}
+    </section>
+
+    <section class="panel" aria-labelledby="facts-heading">
+      <h2 id="facts-heading">Details</h2>
+      {% set listed = item.facts|rejectattr(0, "equalto", "Runtime")|list %}
+      {% if listed %}
+        <dl class="facts">
+          {% for label, value in listed %}<div><dt>{{ label }}</dt><dd>{{ value }}</dd></div>{% endfor %}
+        </dl>
+      {% elif online_source %}
+        <p class="panel-empty">Director, cast, studio and more can be filled in from {{ online_source.name }}.</p>
+      {% else %}
+        <p class="panel-empty">There's no online database for this kind yet.</p>
+      {% endif %}
+
+      <div class="panel-foot">
+        {% if item.source_url %}
+          <a href="{{ item.source_url }}" target="_blank" rel="noopener noreferrer">
+            {{ icon("external") }} {{ item.source }}<span class="sr-only"> (opens in a new tab)</span>
+          </a>
+        {% endif %}
+        {% if online_source %}
+          <form method="post" action="/titles/{{ item.id }}/details">
+            {% if item.facts %}
+              <button type="submit" class="link-button" title="Get the latest details from {{ online_source.name }}">{{ icon("refresh") }} Refresh</button>
+            {% else %}
+              <button type="submit" class="btn btn-small">{{ icon("sparkle") }} Get details from {{ online_source.name }}</button>
+            {% endif %}
+          </form>
+        {% endif %}
+      </div>
+      {% if online_source and online_source.notice and item.source == online_source.name %}
+        <p class="panel-notice">{{ online_source.notice }}</p>
+      {% endif %}
+    </section>
+  </aside>
+</div>
 {% endblock %}

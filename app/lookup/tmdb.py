@@ -5,6 +5,7 @@ looked up on Wikipedia instead, so the app works the same out of the box.
 """
 
 import os
+from dataclasses import replace
 from functools import lru_cache
 
 from app.catalog import SCREEN_GENRES
@@ -50,6 +51,33 @@ def _image(path: str | None, size: str) -> str:
     return f"{IMAGES}/{size}{path}" if path else ""
 
 
+def _trailer(movie: dict) -> str:
+    """The official YouTube trailer, else any trailer or teaser."""
+    videos = [v for v in (movie.get("videos") or {}).get("results") or [] if v.get("site") == "YouTube"]
+    for wanted in (
+        lambda v: v.get("type") == "Trailer" and v.get("official"),
+        lambda v: v.get("type") == "Trailer",
+        lambda v: v.get("type") == "Teaser",
+    ):
+        video = next((v for v in videos if wanted(v)), None)
+        if video:
+            return base.youtube(video.get("key"))
+    return ""
+
+
+def _facts(movie: dict) -> tuple[tuple[str, str], ...]:
+    credits = movie.get("credits") or {}
+    crew = credits.get("crew") or []
+    votes = movie.get("vote_count") or 0
+    return base.facts(
+        ("Director", base.names([c.get("name") for c in crew if c.get("job") == "Director"], 2)),
+        ("Writers", base.names([c.get("name") for c in crew if c.get("job") in ("Screenplay", "Writer")], 3)),
+        ("Starring", base.names([c.get("name") for c in credits.get("cast") or []])),
+        ("Runtime", base.duration(movie.get("runtime"))),
+        ("Rating on TMDB", base.score(movie.get("vote_average"), 10) if votes >= 10 else ""),
+    )
+
+
 def _match(movie: dict, genres: list[str] | None = None) -> Match:
     # TMDB tags most movies "Drama", often first ("Drama, Science Fiction"), so it's the fallback.
     genres = sorted(genres or [], key=lambda name: name == "Drama")
@@ -77,7 +105,13 @@ def search(query: str) -> tuple[Match, ...]:
 def details(movie_id: str) -> Match | None:
     if not movie_id.isdigit():
         return None
-    movie = _get(f"/movie/{movie_id}")
+    # One request brings the cast and crew and the videos along with the movie.
+    movie = _get(f"/movie/{movie_id}", {"append_to_response": "credits,videos"})
     if not isinstance(movie, dict) or "id" not in movie:
         return None
-    return _match(movie, [genre.get("name", "") for genre in movie.get("genres") or []])
+    return replace(
+        _match(movie, [genre.get("name", "") for genre in movie.get("genres") or []]),
+        facts=_facts(movie),
+        page_url=f"https://www.themoviedb.org/movie/{movie_id}",
+        trailer_url=_trailer(movie),
+    )

@@ -1,6 +1,8 @@
 """Books from Open Library (https://openlibrary.org/developers/api), free and with no key."""
 
 import re
+from collections import Counter
+from dataclasses import replace
 from functools import lru_cache
 
 from app.lookup import base
@@ -11,6 +13,7 @@ NAME = "Open Library"
 API = "https://openlibrary.org"
 COVERS = "https://covers.openlibrary.org/b/id"
 FIELDS = "key,title,author_name,first_publish_year,number_of_pages_median,cover_i,subject"
+DETAIL_FIELDS = f"{FIELDS},person,place,edition_count,ratings_average,ratings_count"
 
 # Open Library has thousands of free-form subjects. These words map them to the app's genres;
 # the order is the priority, so "science fiction" wins over the plain "fiction" a book also has.
@@ -40,8 +43,19 @@ SUBJECT_GENRES = [
 ]
 
 
+PRIORITY = list(dict.fromkeys(genre for _, genre in SUBJECT_GENRES))
+BROAD = {"Fiction", "Classics"}  # true of so many books that they only count when nothing else fits
+
+
 def _genre(subjects: list[str]) -> str:
-    return base.genre_by_priority(" | ".join(subjects), SUBJECT_GENRES)
+    """The genre most of the subjects point to.
+
+    One comic adaptation adds "Graphic novels" to The Hobbit's subjects, but "fantasy" comes up far
+    more often, so counting beats taking the first match. Ties go to the list's order.
+    """
+    counts = Counter(genre for subject in subjects if (genre := base.genre_by_priority(subject, SUBJECT_GENRES)))
+    specific = {genre: count for genre, count in counts.items() if genre not in BROAD} or counts
+    return max(specific, key=lambda genre: (specific[genre], -PRIORITY.index(genre)), default="")
 
 
 def _match(doc: dict, description: str = "", subjects: list[str] | None = None) -> Match:
@@ -57,6 +71,17 @@ def _match(doc: dict, description: str = "", subjects: list[str] | None = None) 
         thumb_url=f"{COVERS}/{cover}-M.jpg" if cover else "",
         author=(doc.get("author_name") or [""])[0],
         pages=min(pages, MAX_PAGES) if pages else None,
+    )
+
+
+def _facts(doc: dict) -> tuple[tuple[str, str], ...]:
+    editions = doc.get("edition_count") or 0
+    rated = (doc.get("ratings_count") or 0) >= 5  # a couple of votes say little
+    return base.facts(
+        ("Characters", base.names(doc.get("person") or [])),
+        ("Setting", base.names(doc.get("place") or [], 3)),
+        ("Editions", f"{editions:,}" if editions > 1 else ""),
+        ("Rating on Open Library", base.score(doc.get("ratings_average"), 5) if rated else ""),
     )
 
 
@@ -78,9 +103,10 @@ def search(query: str) -> tuple[Match, ...]:
 def details(work_id: str) -> Match | None:
     if not re.fullmatch(r"OL\d+W", work_id):
         return None
-    body = base.get_json(f"{API}/search.json", {"q": f"key:/works/{work_id}", "fields": FIELDS}) or {}
+    body = base.get_json(f"{API}/search.json", {"q": f"key:/works/{work_id}", "fields": DETAIL_FIELDS}) or {}
     docs = body.get("docs") or []
     if not docs:
         return None
     work = base.get_json(f"{API}/works/{work_id}.json") or {}
-    return _match(docs[0], _description(work), (work.get("subjects") or []) + (docs[0].get("subject") or []))
+    match = _match(docs[0], _description(work), (work.get("subjects") or []) + (docs[0].get("subject") or []))
+    return replace(match, facts=_facts(docs[0]), page_url=f"{API}/works/{work_id}")

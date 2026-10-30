@@ -131,6 +131,9 @@ class KindConfig:
     # The statuses this kind allows, in display order, with the label shown for each.
     status_labels: dict[Status, str]
     year_label: str = "Release year"
+    # Where you watch, play or read it: the field's name and the suggestions offered while typing.
+    platform_label: str = "Where"
+    platforms: tuple[str, ...] = ()
     # Seasons, episodes and "last episode watched" tracking.
     has_episodes: bool = False
     # Author, page count and "current page" tracking.
@@ -140,6 +143,8 @@ class KindConfig:
     def statuses(self) -> tuple[Status, ...]:
         return tuple(self.status_labels)
 
+
+STREAMING = ("Netflix", "Disney+", "Prime Video", "HBO Max", "Apple TV+")
 
 # Series and anime work exactly the same way.
 EPISODIC_STATUS_LABELS = {
@@ -155,12 +160,14 @@ KIND_CONFIG: dict[Kind, KindConfig] = {
         plural="Movies",
         genres=SCREEN_GENRES,
         status_labels={Status.PLANNED: "Watchlist", Status.FINISHED: "Watched"},
+        platforms=("Cinema", *STREAMING, "Blu-ray", "TV"),
     ),
     Kind.SERIES: KindConfig(
         label="Series",
         plural="Series",
         genres=SCREEN_GENRES,
         status_labels=EPISODIC_STATUS_LABELS,
+        platforms=(*STREAMING, "TV"),
         has_episodes=True,
     ),
     Kind.ANIME: KindConfig(
@@ -168,6 +175,7 @@ KIND_CONFIG: dict[Kind, KindConfig] = {
         plural="Anime",
         genres=SCREEN_GENRES,
         status_labels=EPISODIC_STATUS_LABELS,
+        platforms=("Crunchyroll", *STREAMING, "TV"),
         has_episodes=True,
     ),
     Kind.GAME: KindConfig(
@@ -180,6 +188,9 @@ KIND_CONFIG: dict[Kind, KindConfig] = {
             Status.FINISHED: "Completed",
             Status.DROPPED: "Dropped",
         },
+        platform_label="Platform",
+        platforms=("PC", "PlayStation 5", "PlayStation 4", "Xbox Series X|S", "Nintendo Switch", "Nintendo Switch 2",
+                   "Steam Deck", "Mobile"),
     ),
     Kind.BOOK: KindConfig(
         label="Book",
@@ -192,6 +203,8 @@ KIND_CONFIG: dict[Kind, KindConfig] = {
             Status.DROPPED: "Dropped",
         },
         year_label="Year published",
+        platform_label="Format",
+        platforms=("Paperback", "Hardcover", "E-book", "Kindle", "Audiobook", "Library copy"),
         has_pages=True,
     ),
 }
@@ -217,6 +230,8 @@ def form_config() -> dict[str, dict]:
             "genres": list(config.genres),
             "statuses": {status.value: label for status, label in config.status_labels.items()},
             "year_label": config.year_label,
+            "platform_label": config.platform_label,
+            "platforms": list(config.platforms),
         }
         for kind, config in KIND_CONFIG.items()
     }

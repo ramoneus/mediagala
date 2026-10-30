@@ -1,5 +1,6 @@
 """Series from TVmaze (https://www.tvmaze.com/api). No key needed; data licensed CC BY-SA."""
 
+from dataclasses import replace
 from functools import lru_cache
 
 from app.catalog import SCREEN_GENRES
@@ -44,10 +45,19 @@ def search(query: str) -> tuple[Match, ...]:
 def details(show_id: str) -> Match | None:
     if not show_id.isdigit():
         return None
-    show = base.get_json(f"{API}/shows/{show_id}", {"embed[]": ["seasons", "episodes"]})
+    show = base.get_json(f"{API}/shows/{show_id}", {"embed[]": ["seasons", "episodes", "cast", "crew"]})
     if not isinstance(show, dict):
         return None
     embedded = show.get("_embedded") or {}
+    channel = show.get("network") or show.get("webChannel") or {}
+    facts = base.facts(
+        ("Created by", base.names([c["person"].get("name") for c in _people(embedded, "crew") if c.get("type") == "Creator"])),
+        ("Starring", base.names([c["person"].get("name") for c in _people(embedded, "cast")])),
+        ("Network", channel.get("name")),
+        ("Status", show.get("status") if show.get("status") in ("Running", "Ended") else ""),
+        ("Episode length", base.duration(show.get("averageRuntime") or show.get("runtime"))),
+        ("Rating on TVmaze", base.score((show.get("rating") or {}).get("average"), 10)),
+    )
     # Count the listed episodes too: older seasons sometimes have no episode total.
     listed: dict[int, int] = {}
     for episode in embedded.get("episodes") or []:
@@ -57,4 +67,11 @@ def details(show_id: str) -> Match | None:
         count = season.get("episodeOrder") or listed.get(season.get("number"), 0)
         if count:  # skip announced seasons with no episodes yet
             counts.append(min(count, MAX_EPISODES_PER_SEASON))
-    return _match(show, tuple(counts[:MAX_SEASONS]))
+    return replace(
+        _match(show, tuple(counts[:MAX_SEASONS])), facts=facts, page_url=f"https://www.tvmaze.com/shows/{show_id}"
+    )
+
+
+def _people(embedded: dict, role: str) -> list[dict]:
+    """Cast or crew entries that name a person."""
+    return [entry for entry in embedded.get(role) or [] if isinstance(entry.get("person"), dict)]

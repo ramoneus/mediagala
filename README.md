@@ -40,6 +40,14 @@ It's built with **FastAPI**, **SQLAlchemy 2.0**, **SQLite** and **Jinja2**. It r
   - **Games:** [Wikipedia](https://en.wikipedia.org/), so console games are found too.
   - **Books:** [Open Library](https://openlibrary.org/). Also fills in the author and page count.
   - Every kind works without any API key, and the form still works by hand when you're offline.
+- **A full page for every title:**
+  - **Header:** the cover over a blurred copy of itself, your status and rating, and a **Trailer** button when the source has one.
+  - **Your log:** where you watched, played or read it (Netflix, PS5, Kindle…, with suggestions per kind), when you started and finished, and how many days it took.
+  - **Your notes:** what you thought, kept with the title.
+  - **Details from the online source:** director, writers and cast (movies), creators, network and episode length (series), studio and source material (anime), developer and publisher (games), characters, setting and editions (books), plus the community rating and a link to the title's page there.
+  - Details are saved with the title, so the page opens instantly and works offline. Titles added before can fetch them with one click on **Get details**.
+  - Starting something planned records today as its start date, and finishing it suggests today as the end date.
+  - After a change, a short message pops up at the bottom and fades away.
 - **Search** by title or author (case-insensitive)
 - **Filter** by type, genre and watch status. A filter applies as soon as you pick it.
 - **Sort** by title, release year or rating (ascending/descending), or by date added
@@ -120,6 +128,8 @@ Movies, series and games share one `titles` table, so search, filters, sorting a
 
 Everything that differs per kind lives in one place, [`catalog.py`](app/catalog.py): allowed statuses and their labels ("Watched" vs "Completed"), genres, and whether the kind has episodes. The validation, the templates and the form's JavaScript all read from it. Anime was added as a single configuration entry that reuses the series behaviour (`has_episodes=True`). Books turn on page tracking (`has_pages=True`) and have their own statuses ("To read", "Reading", "Read"), genres and year label.
 
+Online details are stored as a small JSON list of `[label, value]` pairs (`facts`), since each kind has different ones, next to the source's name and id. Links to the source page and the trailer are built by the app from those ids and never read from the form.
+
 Episodes are watched in order, so progress is stored as a single bookmark: the last watched season and episode. Every episode up to that point counts as watched. This keeps the schema small and makes "up next" and progress percentage simple calculations.
 
 ##  Getting Started
@@ -184,10 +194,11 @@ The `.env` file is in `.gitignore`, so your key never ends up on GitHub.
 
 ##  Tests
 
-The `tests/` folder holds a **pytest** suite of about 150 tests. It covers:
+The `tests/` folder holds a **pytest** suite of about 230 tests. It covers:
 
 - the validation rules for each kind
-- episode and reading progress
+- episode and reading progress, dates and notes
+- the online sources and the details read from them (with the services' answers faked, so the tests run offline)
 - adding, editing and deleting through the real web forms
 - search, filters and sorting
 - image uploads
@@ -211,6 +222,7 @@ Every test gets a fresh database in a temporary folder (set through the `MEDIAGA
   - A completed game must say how far it was played.
   - Episode progress must exist in the series' seasons.
   - Marking a series as watched sets its progress to the final episode.
+  - Dates can't be in the future, and a title can't be finished before it was started. Planned titles have no dates.
 - Older databases are migrated automatically on start-up. The table is renamed and the new columns are added, so existing data is kept.
 - If a form is invalid, the page renders again with the user's input kept and an error message on each invalid field (HTTP 422).
 - **Post/Redirect/Get:** every create, update and delete ends in a `303` redirect, so refreshing the page never submits a form twice.

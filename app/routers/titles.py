@@ -8,6 +8,7 @@ Every state-changing action is a POST that ends in a 303 redirect
 import enum
 import io
 from dataclasses import dataclass
+from datetime import date
 from typing import Annotated, Any
 from urllib.parse import urlencode
 
@@ -30,7 +31,7 @@ from app.catalog import (
 )
 from app.database import get_db
 from app.models import Title
-from app.schemas import MAX_HOURS_PLAYED, MAX_PAGES, MAX_YEAR, TitleIn, form_errors
+from app.schemas import ENDED, MAX_HOURS_PLAYED, MAX_NOTES, MAX_PAGES, MAX_YEAR, TitleIn, form_errors
 from app.templating import templates
 
 router = APIRouter()
@@ -44,6 +45,9 @@ FLASH_MESSAGES = {
     "created": "Added to your collection.",
     "updated": "Changes saved.",
     "deleted": "Removed from your collection.",
+    "details": "Details filled in from the online database.",
+    "details_missing": "It wasn't found online under this title and year. Edit it and pick it in “Find it online”.",
+    "details_offline": "The online database didn't answer. Try again in a moment.",
 }
 
 
@@ -84,6 +88,25 @@ async def read_poster_input(request: Request) -> PosterInput:
 
 
 PosterFormData = Annotated[PosterInput, Depends(read_poster_input)]
+
+
+@dataclass(frozen=True)
+class LookupPick:
+    """The result picked in "Find it online", if any: which source and its id there."""
+
+    source: str
+    source_id: str
+
+
+async def read_lookup_pick(request: Request) -> LookupPick:
+    form = await request.form()
+    return LookupPick(
+        source=str(form.get("lookup_source", "")).strip()[:30],
+        source_id=str(form.get("lookup_id", "")).strip()[:100],
+    )
+
+
+LookupFormData = Annotated[LookupPick, Depends(read_lookup_pick)]
 
 
 def get_title_or_404(title_id: int, db: DbSession) -> Title:
@@ -165,7 +188,40 @@ def form_from_title(item: Title) -> dict[str, Any]:
         "author": item.author,
         "pages": item.pages,
         "current_page": item.current_page,
+        "platform": item.platform,
+        "started_on": item.started_on.isoformat() if item.started_on else "",
+        "finished_on": item.finished_on.isoformat() if item.finished_on else "",
+        "notes": item.notes,
     }
+
+
+def online_pick(kind: Kind, pick: LookupPick) -> crud.OnlinePick | None:
+    """The details of the result picked in the form, fetched again on the server (never trusted from the form)."""
+    source = lookup.source_named(kind, pick.source) if pick.source_id else None
+    if source is None:
+        return None
+    try:
+        match = source.details(pick.source_id)  # usually cached: the form asked for it a moment ago
+    except lookup.LookupFailed:
+        return None  # saved without them; "Get details" on the title's page can try again
+    return (source.name, match) if match else None
+
+
+def find_online(item: Title) -> crud.OnlinePick | None:
+    """The title's details from the source it was picked from, else from a search by its name and year."""
+    source = lookup.source_named(item.kind, item.source) if item.source_id else None
+    if source is not None:
+        match = source.details(item.source_id)
+        return (source.name, match) if match else None
+    source = lookup.source_for(item.kind)
+    if source is None:
+        return None
+    wanted = crud.same_title(item.title)
+    for result in source.search(item.title):
+        if crud.same_title(result.title) == wanted and result.year in (None, item.year):
+            match = source.details(result.source_id)
+            return (source.name, match) if match else None
+    return None
 
 
 def validate_submission(
@@ -201,6 +257,9 @@ def render_form(
     # The page is rendered for the submitted kind/status so the right fields start visible;
     # title-form.js keeps them in sync when the user changes either.
     current_kind = parse_choice(Kind, str(form.get("kind") or "")) or Kind.MOVIE
+    # "Watched on" or "Dropped on": the end date is named after the status.
+    ended = parse_choice(Status, str(form.get("status") or ""))
+    ended_label = current_kind.config.status_labels.get(ended if ended in ENDED else Status.FINISHED, "Finished")
     return templates.TemplateResponse(
         request,
         "title_form.html",
@@ -212,17 +271,22 @@ def render_form(
             "kinds": list(Kind),
             "current_kind": current_kind,
             "finished_label": current_kind.config.status_labels.get(Status.FINISHED, ""),
+            "finished_on_label": f"{ended_label} on",
             "current_status": str(form.get("status") or Status.PLANNED.value),
             "statuses": list(Status),
             # Which kinds offer each status, e.g. "dropped" -> "series game".
             "status_kinds": {s.value: " ".join(k.value for k in Kind if s in k.config.statuses) for s in Status},
             "episodic_kinds": " ".join(k.value for k in EPISODIC_KINDS),
             "paged_kinds": " ".join(k.value for k in PAGED_KINDS),
+            # Kinds you can be partway through, so they have a start date (not movies).
+            "started_kinds": " ".join(k.value for k in Kind if Status.IN_PROGRESS in k.config.statuses),
             "max_pages": MAX_PAGES,
             "completions": list(Completion),
             "form_config": form_config(),
             "max_year": MAX_YEAR,
             "max_hours": MAX_HOURS_PLAYED,
+            "max_notes": MAX_NOTES,
+            "today": date.today().isoformat(),
             "accepted_types": posters.ACCEPTED_TYPES,
         },
         status_code=status_code,
@@ -314,15 +378,17 @@ def new_title(request: Request, kind: str = "") -> HTMLResponse:
 
 
 @router.post("/titles", name="create_title")
-def create_title(request: Request, db: DbSession, raw: TitleFormData, poster: PosterFormData) -> Response:
+def create_title(
+    request: Request, db: DbSession, raw: TitleFormData, poster: PosterFormData, pick: LookupFormData
+) -> Response:
     data, image, errors = validate_submission(raw, poster)
     if errors or data is None:
-        form = {**raw, "poster_url": poster.url}
+        form = {**raw, "poster_url": poster.url, "lookup_source": pick.source, "lookup_id": pick.source_id}
         return render_form(request, form=form, errors=errors, status_code=status.HTTP_422_UNPROCESSABLE_CONTENT)
 
     filename = posters.save_poster(*image) if image else None
     try:
-        crud.create_title(db, data, poster_filename=filename)
+        crud.create_title(db, data, poster_filename=filename, online=online_pick(data.kind, pick))
     except Exception:
         posters.delete_poster(filename)  # don't leave an orphaned file behind
         raise
@@ -330,8 +396,18 @@ def create_title(request: Request, db: DbSession, raw: TitleFormData, poster: Po
 
 
 @router.get("/titles/{title_id}", response_class=HTMLResponse, name="title_detail")
-def title_detail(request: Request, item: ExistingTitle) -> HTMLResponse:
-    return templates.TemplateResponse(request, "title_detail.html", {"item": item})
+def title_detail(request: Request, item: ExistingTitle, msg: str = "") -> HTMLResponse:
+    return templates.TemplateResponse(
+        request,
+        "title_detail.html",
+        {
+            "item": item,
+            # Where "Get details" would look: the source it was picked from, else this kind's search.
+            "online_source": lookup.source_named(item.kind, item.source) or lookup.source_for(item.kind),
+            "flash": FLASH_MESSAGES.get(msg),
+            "flash_is_error": msg in ("details_missing", "details_offline"),
+        },
+    )
 
 
 @router.get("/titles/{title_id}/edit", response_class=HTMLResponse, name="edit_title")
@@ -340,16 +416,22 @@ def edit_title(request: Request, item: ExistingTitle, finished: bool = False) ->
     finished = finished and (item.kind.has_episodes or item.kind.has_pages)
     if finished:
         form["status"] = Status.FINISHED.value
+        form["finished_on"] = form["finished_on"] or date.today().isoformat()  # just finished: today
     return render_form(request, form=form, item=item, finished=finished)
 
 
 @router.post("/titles/{title_id}/edit", name="update_title")
 def update_title(
-    request: Request, db: DbSession, item: ExistingTitle, raw: TitleFormData, poster: PosterFormData
+    request: Request,
+    db: DbSession,
+    item: ExistingTitle,
+    raw: TitleFormData,
+    poster: PosterFormData,
+    pick: LookupFormData,
 ) -> Response:
     data, image, errors = validate_submission(raw, poster)
     if errors or data is None:
-        form = {**raw, "poster_url": poster.url}
+        form = {**raw, "poster_url": poster.url, "lookup_source": pick.source, "lookup_id": pick.source_id}
         return render_form(
             request, form=form, errors=errors, item=item, status_code=status.HTTP_422_UNPROCESSABLE_CONTENT
         )
@@ -363,7 +445,7 @@ def update_title(
         new_filename = old_filename
 
     try:
-        crud.update_title(db, item, data, poster_filename=new_filename)
+        crud.update_title(db, item, data, poster_filename=new_filename, online=online_pick(data.kind, pick))
     except Exception:
         if new_filename != old_filename:
             posters.delete_poster(new_filename)
@@ -371,7 +453,32 @@ def update_title(
     # Only remove the old file once the database points at the new one.
     if new_filename != old_filename:
         posters.delete_poster(old_filename)
-    return redirect("/?msg=updated")
+    return redirect(f"/titles/{item.id}?msg=updated")
+
+
+@router.post("/titles/{title_id}/details", name="fetch_details")
+def fetch_details(db: DbSession, item: ExistingTitle) -> RedirectResponse:
+    """ "Get details" on a title's page: fill in credits, links and anything missing from the online source."""
+    try:
+        online = find_online(item)
+    except lookup.LookupFailed:
+        return redirect(f"/titles/{item.id}?msg=details_offline")
+    if online is None:
+        return redirect(f"/titles/{item.id}?msg=details_missing")
+
+    filename = None
+    image_url = online[1].image_url
+    if item.poster_filename is None and image_url:
+        try:
+            filename = posters.save_poster(*posters.read_poster(io.BytesIO(lookup.fetch_image(image_url))))
+        except (lookup.LookupFailed, posters.PosterError):
+            pass  # the details are still worth keeping without the image
+    try:
+        crud.save_online_details(db, item, online, poster_filename=filename)
+    except Exception:
+        posters.delete_poster(filename)
+        raise
+    return redirect(f"/titles/{item.id}?msg=details")
 
 
 @router.post("/titles/{title_id}/delete", name="delete_title")
