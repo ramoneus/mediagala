@@ -57,7 +57,7 @@ It's built with **FastAPI**, **SQLAlchemy 2.0**, **SQLite** and **Jinja2**. It r
 - **Responsive** layout for desktop, tablet and mobile
 - **Light and dark themes:**
   - The app follows your system setting by default.
-  - The ☀️/🌙 button in the header switches theme, and the app remembers your choice.
+  - The sun/moon button in the header switches theme, and the app remembers your choice.
   - There's no flash of the wrong theme while a page loads.
 - **Custom images:** upload your own JPG, PNG or WebP image for any title, then replace or remove it later. Images are shrunk automatically, so the collection stays small on disk.
 - **A shelf of covers:** the collection is a grid of portrait covers with the title and one line under each, the way film and game libraries look. Phones show three covers per row.
@@ -246,7 +246,7 @@ Every test gets a fresh database in a temporary folder (set through the `MEDIAGA
 |------|------------|--------|
 | ![Home](docs/screenshots/home.png) | ![Form](docs/screenshots/form.png) | ![Mobile](docs/screenshots/mobile.png) |
 
-## 🗺 Possible Improvements
+## Possible Improvements
 
 - Pagination for large collections
 - An optional IGDB source for games (it needs a free Twitch developer key) for sharper covers and platforms
@@ -268,6 +268,6 @@ The online search uses these free services. Their data stays theirs, under their
 
 MediaGala is a personal, non-commercial project.
 
-## 📄 License
+## License
 
 [MIT](LICENSE). Feel free to use this project for learning.
