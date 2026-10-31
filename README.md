@@ -75,53 +75,6 @@ It's built with **FastAPI**, **SQLAlchemy 2.0**, **SQLite** and **Jinja2**. It r
 | Validation | Pydantic v2                        |
 | Frontend   | Jinja2 templates · HTML5 · CSS3    |
 
-##  Project Structure
-
-```
-mediagala/
-├── app/
-│   ├── main.py              # App factory, static files, error handlers
-│   ├── catalog.py           # Kinds, statuses, genres: what each kind supports
-│   ├── database.py          # Engine, session factory, get_db, lightweight migrations
-│   ├── models.py            # SQLAlchemy models (Title, Season) + episode-progress logic
-│   ├── schemas.py           # Pydantic validation for form input
-│   ├── crud.py              # Data access: queries, filtering, sorting, stats
-│   ├── posters.py           # Image upload validation and storage
-│   ├── lookup/              # Online search that fills in the form
-│   │   ├── __init__.py      # Which source serves which kind, safe image download
-│   │   ├── base.py          # Shared result type, HTTP calls, text clean-up
-│   │   └── tmdb.py, wikipedia.py, tvmaze.py, anilist.py, openlibrary.py
-│   ├── settings.py          # Reads optional API keys from .env
-│   ├── seed.py              # Optional sample data
-│   ├── templating.py        # Shared Jinja2 environment
-│   ├── routers/
-│   │   ├── titles.py        # HTML routes (list, detail, create, edit, delete, episodes)
-│   │   └── lookup.py        # JSON endpoints for the online search
-│   ├── templates/           # Jinja2 templates
-│   │   ├── base.html
-│   │   ├── index.html
-│   │   ├── title_detail.html
-│   │   ├── title_form.html
-│   │   ├── error.html
-│   │   └── partials/        # title_card.html, poster.html
-│   └── static/
-│       ├── css/style.css
-│       ├── js/title-form.js # Adapts the form to the chosen kind
-│       └── favicon.svg
-├── tests/                   # pytest suite (runs on a temporary database)
-├── docs/screenshots/        # README images
-├── data/                    # SQLite database + uploaded images (created at runtime, git-ignored)
-├── run.bat                  # Windows one-click launcher
-├── run.py                   # Starts the server and opens the browser
-├── requirements.txt
-├── requirements-dev.txt     # + pytest, for running the tests
-├── .env.example             # Optional settings (API keys); copy to .env
-├── pyproject.toml           # pytest settings
-└── README.md
-```
-
-Each layer has one job. **Routes** handle HTTP, **schemas** validate input, **crud** talks to the database, and **templates** render the UI.
-
 ### Data model
 
 Movies, series and games share one `titles` table, so search, filters, sorting and images work the same for every kind. A series also has a list of `seasons`, each with its number of episodes, in a one-to-many relationship with cascade delete. Games add a completion level and hours played.
@@ -242,9 +195,7 @@ Every test gets a fresh database in a temporary folder (set through the `MEDIAGA
 
 ##  Screenshots
 
-| Home | Add / Edit | Mobile |
-|------|------------|--------|
-| ![Home](docs/screenshots/home.png) | ![Form](docs/screenshots/form.png) | ![Mobile](docs/screenshots/mobile.png) |
+![Home](docs/screenshots/home.png)
 
 ## Possible Improvements
 
